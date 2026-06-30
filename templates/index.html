@@ -618,11 +618,14 @@
 
   function sessionBadge(s) {
     const time = escHtml(s.heure);
+    let badge;
     if (s.temperature === null || s.temperature === undefined) {
-      return `<span style="white-space:nowrap;font-size:0.82rem;color:#aaa">${time}</span>`;
+      badge = `<span style="white-space:nowrap;font-size:0.82rem;color:#aaa">${time}</span>`;
+    } else {
+      const color = tempColor(s.temperature);
+      badge = `<span style="white-space:nowrap;font-size:0.82rem;">${time}&nbsp;<span class="temp-badge" style="background:${color}">${s.temperature.toFixed(1)}&nbsp;°C</span></span>`;
     }
-    const color = tempColor(s.temperature);
-    return `<span style="white-space:nowrap;font-size:0.82rem;">${time}&nbsp;<span class="temp-badge" style="background:${color}">${s.temperature.toFixed(1)}&nbsp;°C</span></span>`;
+    return `<span style="white-space:nowrap;display:inline-flex;align-items:center;gap:3px;">${badge}${calBtn(s)}</span>`;
   }
 
   function seancesCell(sessions) {
