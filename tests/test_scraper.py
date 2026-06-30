@@ -7,17 +7,20 @@ Architecture post-allocineAPI:
 """
 from unittest.mock import patch, Mock, MagicMock
 import scraper
-from scraper import _api_to_sessions, scrape_cinema_day, scrape_all, CINEMA_IDS
+from scraper import _api_to_sessions, scrape_cinema_day, scrape_all, CINEMA_IDS, _format_runtime
 
 # ---------------------------------------------------------------------------
-# Sample API response matching the real allocineAPI structure:
-# {"title": str, "showtimes": [{"startsAt": ISO str, "diffusionVersion": str}]}
+# Sample API response matching our enriched structure:
+# {"title": str, "film_url": str, "duration": str,
+#  "showtimes": [{"startsAt": ISO str, "diffusionVersion": str}]}
 # diffusionVersion: "DUBBED" -> VF, "ORIGINAL" -> VO, "LOCAL" -> VF
 # ---------------------------------------------------------------------------
 
 SAMPLE_API_RESPONSE = [
     {
         "title": "Dune : Partie 2",
+        "film_url": "https://www.allocine.fr/film/fichefilm_gen_cfilm=223395.html",
+        "duration": "2h 46min",
         "showtimes": [
             {"startsAt": "2026-06-30T14:00:00", "diffusionVersion": "DUBBED"},
             {"startsAt": "2026-06-30T17:30:00", "diffusionVersion": "DUBBED"},
@@ -26,6 +29,8 @@ SAMPLE_API_RESPONSE = [
     },
     {
         "title": "Le Comte de Monte-Cristo",
+        "film_url": "https://www.allocine.fr/film/fichefilm_gen_cfilm=278154.html",
+        "duration": "4h 01min",
         "showtimes": [
             {"startsAt": "2026-06-30T15:00:00", "diffusionVersion": "DUBBED"},
         ],
@@ -51,9 +56,33 @@ class TestApiToSessions:
 
     def test_all_required_keys_present(self):
         result = _api_to_sessions(SAMPLE_API_RESPONSE, "Pathé Bellecour", "2026-06-30")
-        required = {"cinema", "film", "date", "heure", "version", "temperature"}
+        required = {"cinema", "film", "film_url", "duration", "date", "heure", "version", "temperature"}
         for session in result:
             assert required == set(session.keys()), f"Missing keys in {session}"
+
+    def test_film_url_present(self):
+        result = _api_to_sessions(SAMPLE_API_RESPONSE, "Pathé Bellecour", "2026-06-30")
+        dune = [s for s in result if s["film"] == "Dune : Partie 2"][0]
+        assert dune["film_url"] == "https://www.allocine.fr/film/fichefilm_gen_cfilm=223395.html"
+
+    def test_duration_present(self):
+        result = _api_to_sessions(SAMPLE_API_RESPONSE, "Pathé Bellecour", "2026-06-30")
+        dune = [s for s in result if s["film"] == "Dune : Partie 2"][0]
+        assert dune["duration"] == "2h 46min"
+
+    def test_missing_film_url_defaults_empty(self):
+        response = [{"title": "Film Test", "showtimes": [
+            {"startsAt": "2026-06-30T10:00:00", "diffusionVersion": "DUBBED"}
+        ]}]
+        result = _api_to_sessions(response, "Test", "2026-06-30")
+        assert result[0]["film_url"] == ""
+
+    def test_missing_duration_defaults_empty(self):
+        response = [{"title": "Film Test", "showtimes": [
+            {"startsAt": "2026-06-30T10:00:00", "diffusionVersion": "DUBBED"}
+        ]}]
+        result = _api_to_sessions(response, "Test", "2026-06-30")
+        assert result[0]["duration"] == ""
 
     def test_temperature_is_none(self):
         result = _api_to_sessions(SAMPLE_API_RESPONSE, "Pathé Bellecour", "2026-06-30")
@@ -134,50 +163,52 @@ class TestApiToSessions:
 # ---------------------------------------------------------------------------
 
 class TestScrapeCinemaDay:
-    """Tests for scrape_cinema_day with a mocked allocineAPI."""
+    """Tests for scrape_cinema_day with a mocked _get_showtime_enriched."""
 
     def test_returns_list(self):
-        mock_api = Mock()
-        mock_api.get_showtime.return_value = SAMPLE_API_RESPONSE
-        result = scrape_cinema_day("Pathé Bellecour", "P0012", "2026-06-30", api=mock_api)
+        with patch("scraper._get_showtime_enriched", return_value=SAMPLE_API_RESPONSE):
+            result = scrape_cinema_day("Pathé Bellecour", "P0012", "2026-06-30", api=Mock())
         assert isinstance(result, list)
 
-    def test_calls_get_showtime_with_correct_args(self):
+    def test_calls_enriched_with_correct_args(self):
         mock_api = Mock()
-        mock_api.get_showtime.return_value = SAMPLE_API_RESPONSE
-        scrape_cinema_day("Pathé Bellecour", "P0012", "2026-06-30", api=mock_api)
-        mock_api.get_showtime.assert_called_once_with("P0012", "2026-06-30")
+        with patch("scraper._get_showtime_enriched", return_value=[]) as mock_enrich:
+            scrape_cinema_day("Pathé Bellecour", "P0012", "2026-06-30", api=mock_api)
+        mock_enrich.assert_called_once_with(mock_api, "P0012", "2026-06-30")
 
     def test_returns_correct_sessions(self):
-        mock_api = Mock()
-        mock_api.get_showtime.return_value = SAMPLE_API_RESPONSE
-        sessions = scrape_cinema_day("Pathé Bellecour", "P0012", "2026-06-30", api=mock_api)
+        with patch("scraper._get_showtime_enriched", return_value=SAMPLE_API_RESPONSE):
+            sessions = scrape_cinema_day("Pathé Bellecour", "P0012", "2026-06-30", api=Mock())
         assert len(sessions) == 4
 
+    def test_sessions_have_film_url_and_duration(self):
+        with patch("scraper._get_showtime_enriched", return_value=SAMPLE_API_RESPONSE):
+            sessions = scrape_cinema_day("Pathé Bellecour", "P0012", "2026-06-30", api=Mock())
+        for s in sessions:
+            assert "film_url" in s
+            assert "duration" in s
+
     def test_returns_empty_on_exception(self):
-        mock_api = Mock()
-        mock_api.get_showtime.side_effect = Exception("API error")
-        sessions = scrape_cinema_day("Pathé Bellecour", "P0012", "2026-06-30", api=mock_api)
+        with patch("scraper._get_showtime_enriched", side_effect=Exception("API error")):
+            sessions = scrape_cinema_day("Pathé Bellecour", "P0012", "2026-06-30", api=Mock())
         assert sessions == []
 
     def test_returns_empty_on_typeerror(self):
         # Matches the real P0050 bug where allocineAPI raises TypeError
-        mock_api = Mock()
-        mock_api.get_showtime.side_effect = TypeError("'NoneType' object is not subscriptable")
-        sessions = scrape_cinema_day("Institut Lumière", "P0050", "2026-06-30", api=mock_api)
+        with patch("scraper._get_showtime_enriched", side_effect=TypeError("'NoneType' object is not subscriptable")):
+            sessions = scrape_cinema_day("Institut Lumière", "P0050", "2026-06-30", api=Mock())
         assert sessions == []
 
     def test_creates_own_api_when_none_passed(self):
-        with patch("scraper.allocineAPI") as MockAPI:
-            mock_instance = MockAPI.return_value
-            mock_instance.get_showtime.return_value = []
+        with patch("scraper.allocineAPI") as MockAPI, \
+             patch("scraper._get_showtime_enriched", return_value=[]):
             scrape_cinema_day("Pathé Bellecour", "P0012", "2026-06-30")
         MockAPI.assert_called_once()
 
     def test_uses_provided_api_instance(self):
         mock_api = Mock()
-        mock_api.get_showtime.return_value = []
-        with patch("scraper.allocineAPI") as MockAPI:
+        with patch("scraper.allocineAPI") as MockAPI, \
+             patch("scraper._get_showtime_enriched", return_value=[]):
             scrape_cinema_day("Pathé Bellecour", "P0012", "2026-06-30", api=mock_api)
         # Should NOT create a new allocineAPI instance
         MockAPI.assert_not_called()
@@ -192,25 +223,24 @@ class TestScrapeAll:
 
     def test_returns_list(self):
         with patch("scraper.allocineAPI") as MockAPI, \
-             patch("scraper.time.sleep"):
-            MockAPI.return_value.get_showtime.return_value = []
+             patch("scraper.time.sleep"), \
+             patch("scraper._get_showtime_enriched", return_value=[]):
             result = scrape_all()
         assert isinstance(result, list)
 
-    def test_calls_get_showtime_189_times(self):
-        """scrape_all must call get_showtime exactly 9 × 21 = 189 times."""
+    def test_calls_enriched_189_times(self):
+        """scrape_all must call _get_showtime_enriched exactly 9 × 21 = 189 times."""
         with patch("scraper.allocineAPI") as MockAPI, \
-             patch("scraper.time.sleep"):
-            mock_instance = MockAPI.return_value
-            mock_instance.get_showtime.return_value = []
+             patch("scraper.time.sleep"), \
+             patch("scraper._get_showtime_enriched", return_value=[]) as mock_enrich:
             scrape_all()
-        assert mock_instance.get_showtime.call_count == len(CINEMA_IDS) * 21
+        assert mock_enrich.call_count == len(CINEMA_IDS) * 21
 
     def test_creates_single_api_instance(self):
         """scrape_all must create exactly one allocineAPI instance."""
         with patch("scraper.allocineAPI") as MockAPI, \
-             patch("scraper.time.sleep"):
-            MockAPI.return_value.get_showtime.return_value = []
+             patch("scraper.time.sleep"), \
+             patch("scraper._get_showtime_enriched", return_value=[]):
             scrape_all()
         assert MockAPI.call_count == 1
 
@@ -218,11 +248,13 @@ class TestScrapeAll:
         """Sessions from all cinema/date calls are concatenated."""
         one_session = {
             "title": "Film Test",
+            "film_url": "https://www.allocine.fr/film/fichefilm_gen_cfilm=99999.html",
+            "duration": "1h 30min",
             "showtimes": [{"startsAt": "2026-06-30T14:00:00", "diffusionVersion": "DUBBED"}],
         }
         with patch("scraper.allocineAPI") as MockAPI, \
-             patch("scraper.time.sleep"):
-            MockAPI.return_value.get_showtime.return_value = [one_session]
+             patch("scraper.time.sleep"), \
+             patch("scraper._get_showtime_enriched", return_value=[one_session]):
             result = scrape_all()
         # 9 cinemas × 21 days = 189 calls, 1 session each
         assert len(result) == len(CINEMA_IDS) * 21
@@ -231,8 +263,8 @@ class TestScrapeAll:
         """progress_callback must be called for each cinema/date combination."""
         calls = []
         with patch("scraper.allocineAPI") as MockAPI, \
-             patch("scraper.time.sleep"):
-            MockAPI.return_value.get_showtime.return_value = []
+             patch("scraper.time.sleep"), \
+             patch("scraper._get_showtime_enriched", return_value=[]):
             scrape_all(progress_callback=lambda cur, tot, name: calls.append((cur, tot, name)))
         assert len(calls) == len(CINEMA_IDS) * 21
         assert calls[0][0] == 1
@@ -244,14 +276,13 @@ class TestScrapeAll:
         from datetime import datetime, timedelta
         scraped_dates = []
 
-        def capture(*args, **kwargs):
-            # args[1] is date_str in get_showtime(cinema_id, date_str)
-            scraped_dates.append(args[1])
+        def capture(api_instance, cinema_id, date_str):
+            scraped_dates.append(date_str)
             return []
 
         with patch("scraper.allocineAPI") as MockAPI, \
-             patch("scraper.time.sleep"):
-            MockAPI.return_value.get_showtime.side_effect = capture
+             patch("scraper.time.sleep"), \
+             patch("scraper._get_showtime_enriched", side_effect=capture):
             scrape_all()
 
         unique_dates = sorted(set(scraped_dates))
@@ -265,7 +296,7 @@ class TestScrapeAll:
         """scrape_all must not raise even if some API calls fail."""
         call_count = 0
 
-        def flaky(*args, **kwargs):
+        def flaky(api_instance, cinema_id, date_str):
             nonlocal call_count
             call_count += 1
             if call_count % 3 == 0:
@@ -273,9 +304,44 @@ class TestScrapeAll:
             return []
 
         with patch("scraper.allocineAPI") as MockAPI, \
-             patch("scraper.time.sleep"):
-            MockAPI.return_value.get_showtime.side_effect = flaky
+             patch("scraper.time.sleep"), \
+             patch("scraper._get_showtime_enriched", side_effect=flaky):
             result = scrape_all()
 
         assert isinstance(result, list)
         assert call_count == len(CINEMA_IDS) * 21
+
+
+# ---------------------------------------------------------------------------
+# Tests for _format_runtime helper
+# ---------------------------------------------------------------------------
+
+class TestFormatRuntime:
+    """Tests for the _format_runtime helper."""
+
+    def test_hours_and_minutes(self):
+        assert _format_runtime(166) == "2h 46min"
+
+    def test_hours_only(self):
+        assert _format_runtime(120) == "2h"
+
+    def test_minutes_only(self):
+        assert _format_runtime(45) == "45min"
+
+    def test_zero_returns_empty(self):
+        assert _format_runtime(0) == ""
+
+    def test_none_returns_empty(self):
+        assert _format_runtime(None) == ""
+
+    def test_negative_returns_empty(self):
+        assert _format_runtime(-10) == ""
+
+    def test_single_minute(self):
+        assert _format_runtime(1) == "1min"
+
+    def test_sixty_minutes(self):
+        assert _format_runtime(60) == "1h"
+
+    def test_zero_minutes_with_hour(self):
+        assert _format_runtime(180) == "3h"

@@ -155,11 +155,19 @@
     #film-search::placeholder { color: var(--muted); }
     #film-search:focus { outline: none; border-color: var(--accent); }
 
+    /* ── Summary bar ── */
+    #summary-container {
+      border-bottom: 1px solid var(--border);
+    }
+
     /* ── Content area ── */
     #content {
       flex: 1;
-      padding: 1.4rem 1.5rem;
       overflow-x: auto;
+    }
+
+    #view-container {
+      padding: 1.4rem 1.5rem;
     }
 
     /* ── Section / group ── */
@@ -235,6 +243,17 @@
     #empty-state .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
     #empty-state p { font-size: 1rem; }
 
+    /* ── Day nav ── */
+    #day-nav {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 10px 16px;
+      margin-bottom: 12px;
+      scrollbar-width: thin;
+      scrollbar-color: #3a3a5a transparent;
+    }
+
     /* ── Responsive ── */
     @media (max-width: 640px) {
       aside { width: 100%; min-height: unset; border-right: none; border-bottom: 1px solid var(--border); }
@@ -289,6 +308,7 @@
   </aside>
 
   <div id="content">
+    <div id="summary-container"></div>
     <div id="view-container"></div>
     <div id="empty-state">
       <div class="empty-icon">🎞️</div>
@@ -306,6 +326,7 @@
   let currentView = 'jour';
   let selectedCinemas = new Set();
   let allCinemas = [];
+  let selectedDay = null;  // null = auto-select first available day
 
   /* ────────────────────────────────────────────
      Temperature helpers
@@ -331,6 +352,19 @@
   }
 
   /* ────────────────────────────────────────────
+     Filter: only keep dates with at least one temp
+  ──────────────────────────────────────────── */
+  function getDatesWithTemperatures(sessions) {
+    const datesWithTemp = new Set();
+    sessions.forEach(s => {
+      if (s.temperature !== null && s.temperature !== undefined) {
+        datesWithTemp.add(s.date);
+      }
+    });
+    return datesWithTemp;
+  }
+
+  /* ────────────────────────────────────────────
      Filtering
   ──────────────────────────────────────────── */
   function getFilteredSessions() {
@@ -352,25 +386,46 @@
     return 'row-' + tempClass(t);
   }
 
-  // Vue A row: Cinema | Heure | Film | Temp
+  function filmCell(s) {
+    const escapedFilm = escHtml(s.film);
+    const versionTag = `<small style="color:var(--muted)">${escHtml(s.version || '')}</small>`;
+    if (s.film_url) {
+      return `<a href="${escHtml(s.film_url)}" target="_blank" rel="noopener"
+        style="color:#4fc3f7;text-decoration:none;"
+        onmouseover="this.style.textDecoration='underline'"
+        onmouseout="this.style.textDecoration='none'"
+      >${escapedFilm}</a> ${versionTag}`;
+    }
+    return `${escapedFilm} ${versionTag}`;
+  }
+
+  function durationCell(s) {
+    return s.duration
+      ? `<span style="color:#888;font-size:0.82rem;">${escHtml(s.duration)}</span>`
+      : `<span style="color:#555;font-size:0.82rem;">—</span>`;
+  }
+
+  // Vue A row: Cinema | Heure | Durée | Film | Temp
   function buildRowJour(s) {
     const cls = rowClass(s.temperature);
     return `<tr class="${cls}">
       <td>${escHtml(s.cinema)}</td>
       <td>${escHtml(s.heure)}</td>
-      <td>${escHtml(s.film)} <small style="color:var(--muted)">${escHtml(s.version || '')}</small></td>
+      <td>${durationCell(s)}</td>
+      <td>${filmCell(s)}</td>
       <td>${tempBadge(s.temperature)}</td>
     </tr>`;
   }
 
-  // Vue B row: Date | Heure | Film | Temp
+  // Vue B row: Date | Heure | Durée | Film | Temp
   function buildRowCinema(s) {
     const cls = rowClass(s.temperature);
     const dateStr = new Date(s.date + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'short', day:'numeric', month:'short'});
     return `<tr class="${cls}">
       <td>${dateStr}</td>
       <td>${escHtml(s.heure)}</td>
-      <td>${escHtml(s.film)} <small style="color:var(--muted)">${escHtml(s.version || '')}</small></td>
+      <td>${durationCell(s)}</td>
+      <td>${filmCell(s)}</td>
       <td>${tempBadge(s.temperature)}</td>
     </tr>`;
   }
@@ -382,33 +437,109 @@
   }
 
   /* ────────────────────────────────────────────
-     Render Vue A — Par jour
+     Temperature summary bar (Vue A only)
+  ──────────────────────────────────────────── */
+  function renderTempSummary(sessions) {
+    const datesWithTemp = getDatesWithTemperatures(sessions);
+    const byDate = {};
+    sessions.forEach(s => {
+      if (datesWithTemp.has(s.date) && s.temperature !== null && s.temperature !== undefined) {
+        (byDate[s.date] = byDate[s.date] || []).push(s.temperature);
+      }
+    });
+    const dates = Object.keys(byDate).sort();
+    if (!dates.length) return '';
+
+    const items = dates.map(date => {
+      const temps = byDate[date];
+      const min = Math.round(Math.min(...temps));
+      const max = Math.round(Math.max(...temps));
+      const d = new Date(date + 'T12:00:00');
+      const label = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
+      const borderColor = tempColor(max) || '#555';
+      const isActive = date === selectedDay;
+      const activeBg = isActive ? 'background:rgba(233,69,96,0.15);' : '';
+      return `<div onclick="selectDay('${date}')" style="text-align:center;padding:6px 12px;border-radius:6px;border:1px solid ${borderColor};min-width:72px;cursor:pointer;transition:background 0.15s;${activeBg}">
+          <div style="font-size:0.72rem;color:#aaa;margin-bottom:3px;">${label}</div>
+          <div style="font-size:0.85rem;color:#e0e0e0;">${min}°–${max}°</div>
+        </div>`;
+    }).join('');
+
+    return `<div style="display:flex;gap:8px;overflow-x:auto;padding:10px 24px;background:#0f3460;scrollbar-width:thin;scrollbar-color:#3a3a5a transparent;">${items}</div>`;
+  }
+
+  /* ────────────────────────────────────────────
+     Day selector
+  ──────────────────────────────────────────── */
+  function selectDay(date) {
+    selectedDay = date;
+    applyFilters();
+    // Scroll active day button into view after render
+    setTimeout(() => {
+      const nav = document.getElementById('day-nav');
+      if (nav) {
+        const active = nav.querySelector('button[data-active="1"]');
+        if (active) active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }, 50);
+  }
+
+  /* ────────────────────────────────────────────
+     Render Vue A — Par jour (horizontal day nav)
   ──────────────────────────────────────────── */
   function renderViewJour(sessions) {
-    // Group by date
+    // Only include dates that have at least one temperature
+    const datesWithTemp = getDatesWithTemperatures(DATA.sessions);
+
     const groups = {};
     for (const s of sessions) {
+      if (!datesWithTemp.has(s.date)) continue;
       if (!groups[s.date]) groups[s.date] = [];
       groups[s.date].push(s);
     }
     const dates = Object.keys(groups).sort();
 
-    if (dates.length === 0) return '';
+    if (dates.length === 0) return '<div style="padding:4rem 2rem;text-align:center;color:var(--muted)">Aucune séance avec données météo disponibles.</div>';
 
-    return dates.map(date => {
-      const rows = groups[date].slice().sort((a,b) => a.cinema.localeCompare(b.cinema) || a.heure.localeCompare(b.heure));
-      const label = new Date(date + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'});
-      const rowsHtml = rows.map(buildRowJour).join('');
-      return `<div class="group">
-        <div class="group-header">${label}</div>
+    // Ensure selectedDay is valid
+    if (!selectedDay || !dates.includes(selectedDay)) {
+      selectedDay = dates[0];
+    }
+
+    // Build horizontal day nav
+    const navHtml = dates.map(date => {
+      const d = new Date(date + 'T12:00:00');
+      const dayLabel = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+      const isActive = date === selectedDay;
+      return `<button data-active="${isActive ? '1' : '0'}" onclick="selectDay('${date}')" style="
+          white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid;
+          cursor:pointer;font-size:0.82rem;transition:all 0.2s;
+          ${isActive
+            ? 'background:#e94560;color:#fff;border-color:#e94560;'
+            : 'background:transparent;color:#aaa;border-color:#3a3a5a;'}
+        ">${dayLabel}</button>`;
+    }).join('');
+
+    // Show only selected day's sessions
+    const daySessions = (groups[selectedDay] || []).slice().sort(
+      (a, b) => a.cinema.localeCompare(b.cinema) || a.heure.localeCompare(b.heure)
+    );
+    const rowsHtml = daySessions.map(buildRowJour).join('');
+
+    const d = new Date(selectedDay + 'T12:00:00');
+    const fullLabel = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    const capitalized = fullLabel.charAt(0).toUpperCase() + fullLabel.slice(1);
+
+    return `<div id="day-nav">${navHtml}</div>
+      <div class="group">
+        <div class="group-header">${capitalized}</div>
         <table>
           <thead><tr>
-            <th>Cinéma</th><th>Heure</th><th>Film</th><th>🌡️</th>
+            <th>Cinéma</th><th>Heure</th><th>Durée</th><th>Film</th><th>🌡️</th>
           </tr></thead>
           <tbody>${rowsHtml}</tbody>
         </table>
       </div>`;
-    }).join('');
   }
 
   /* ────────────────────────────────────────────
@@ -434,7 +565,7 @@
         <div class="group-header">${escHtml(cinema)}</div>
         <table>
           <thead><tr>
-            <th>Date</th><th>Heure</th><th>Film</th><th>🌡️</th>
+            <th>Date</th><th>Heure</th><th>Durée</th><th>Film</th><th>🌡️</th>
           </tr></thead>
           <tbody>${rowsHtml}</tbody>
         </table>
@@ -448,7 +579,13 @@
   function applyFilters() {
     const sessions = getFilteredSessions();
     const container = document.getElementById('view-container');
+    const summaryEl = document.getElementById('summary-container');
     const empty     = document.getElementById('empty-state');
+
+    // Summary bar — only in jour view, uses ALL sessions (not filtered by cinema/film)
+    if (summaryEl) {
+      summaryEl.innerHTML = (currentView === 'jour') ? renderTempSummary(getFilteredSessions()) : '';
+    }
 
     let html = '';
     if (currentView === 'jour') {
