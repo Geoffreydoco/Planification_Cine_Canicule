@@ -1,9 +1,16 @@
-import requests
-from bs4 import BeautifulSoup
 import time
 import json
 import os
 from datetime import datetime, timedelta
+
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
 
 CINEMA_IDS = {
     "Pathé Bellecour":   "P0012",
@@ -17,75 +24,69 @@ CINEMA_IDS = {
     "Institut Lumière":  "P0050",
 }
 
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
-    )
+# French abbreviated month names as they appear on AlloCiné calendar
+_FR_MONTHS = {
+    "janv.": 1, "janv": 1, "jan.": 1, "jan": 1,
+    "févr.": 2, "févr": 2, "fév.": 2, "fév": 2,
+    "mars":  3, "mars.": 3,
+    "avr.":  4, "avr": 4,
+    "mai":   5, "mai.": 5,
+    "juin":  6, "juin.": 6,
+    "juil.": 7, "juil": 7,
+    "août":  8, "août.": 8, "aout": 8,
+    "sept.": 9, "sept": 9,
+    "oct.":  10, "oct": 10,
+    "nov.":  11, "nov": 11,
+    "déc.":  12, "déc": 12, "dec.": 12, "dec": 12,
 }
 
 
-def scrape_cinema_day(cinema_name, cinema_id, date_str):
-    """Scrape les séances d'un cinéma pour une date donnée.
-
-    LIMITATION AlloCiné : les URLs paramétrées par date (d_date=YYYY-MM-DD)
-    renvoient systématiquement 404, et le paramètre ?shwt_date= est ignoré par
-    le serveur. La navigation par date du site est entièrement côté client (JS).
-    En conséquence, l'URL sans date renvoie toujours les séances du jour courant,
-    quelle que soit la valeur de date_str passée en argument.
-
-    Cette fonction accepte toujours date_str pour maintenir une interface
-    cohérente, mais elle scrape uniquement les séances du jour courant.
-    Appeler cette fonction avec une date future ne produira pas les séances de
-    cette date future.
-
-    Retourne une liste de dicts avec les clés :
-        cinema, film, date, heure, version, temperature (None)
-    Retourne [] en cas d'erreur HTTP ou d'absence de données.
-    """
-    # AlloCiné date-parameterized URLs always return 404; the undated URL is
-    # the only working endpoint but always serves today's sessions.
-    url = (
-        f"https://www.allocine.fr/seance/"
-        f"salle_gen_csalle={cinema_id}.html"
+def _make_driver():
+    """Create a headless Chrome WebDriver instance."""
+    options = Options()
+    options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    return webdriver.Chrome(
+        service=Service(ChromeDriverManager().install()),
+        options=options,
     )
 
-    try:
-        r = requests.get(url, headers=HEADERS, timeout=10)
-        r.raise_for_status()
-    except Exception:
-        return []
 
-    soup = BeautifulSoup(r.text, "html.parser")
+def _parse_sessions(html, cinema_name, date_str):
+    """Parse AlloCiné showtime HTML and return a list of session dicts.
+
+    Pure function — no browser interaction, no side effects.
+    Takes raw HTML string (from driver.page_source after date navigation),
+    cinema_name and date_str ("YYYY-MM-DD"), returns:
+        [{"cinema": str, "film": str, "date": str,
+          "heure": str, "version": str, "temperature": None}, ...]
+    """
+    soup = BeautifulSoup(html, "html.parser")
     sessions = []
 
-    # Each film card has class "card entity-card"
     for card in soup.select(".card.entity-card"):
-        # Film title is in h2 (also carries .meta-title on a nested element)
         title_tag = card.select_one("h2")
         if not title_tag:
             continue
         film_title = title_tag.text.strip()
 
-        # Each version block groups showtimes for one version (VF, VOST, …)
         for version_block in card.select(".showtimes-version"):
-            # Version label lives in the "text" div: "30 juin 2026 - En VF"
             text_div = version_block.select_one("div.text")
             if text_div:
                 raw = text_div.text.strip()
-                # Text is "30 juin 2026 -\n                En VF" (newline after dash)
-                # Split on " -" to isolate the version part.
                 if " -" in raw:
                     version_label = raw.split(" -", 1)[1].strip()
                 else:
                     version_label = raw.strip()
-                # Normalise to short form: "VF", "VOST", "VO", …
-                version = version_label.replace("En ", "").strip() if version_label.startswith("En ") else version_label
+                version = (
+                    version_label.replace("En ", "").strip()
+                    if version_label.startswith("En ")
+                    else version_label
+                )
             else:
                 version = "VF"
 
-            # Hour values are in .showtimes-hour-item-value spans
             for hour_tag in version_block.select(".showtimes-hour-item-value"):
                 heure = hour_tag.text.strip()
                 if not heure:
@@ -102,20 +103,155 @@ def scrape_cinema_day(cinema_name, cinema_id, date_str):
     return sessions
 
 
-def scrape_all():
-    """Scrape les séances du jour pour tous les cinémas.
+def _find_date_span(driver, date_str):
+    """Find the calendar span element for the given date_str ("YYYY-MM-DD").
 
-    LIMITATION : AlloCiné ne fournit que les séances du jour courant via
-    scraping HTML statique. La navigation multi-dates est JavaScript uniquement.
-    Cette fonction scrape donc uniquement aujourd'hui pour chaque cinéma.
-
-    Retourne une liste de dicts de séances avec les clés :
-        cinema, film, date, heure, version, temperature (None)
+    Returns the WebElement if found and not disabled, else None.
+    The AlloCiné calendar shows ~28 days from today, each as:
+        <span class="calendar-date-link roller-item [current] [disabled]">
+          <div class="day">mer.</div>
+          <div class="num">1</div>
+          <div class="month">juil.</div>
+        </span>
     """
-    today = datetime.now().strftime("%Y-%m-%d")
-    all_sessions = []
-    for cinema_name, cinema_id in CINEMA_IDS.items():
-        sessions = scrape_cinema_day(cinema_name, cinema_id, today)
-        all_sessions.extend(sessions)
-        time.sleep(1)  # politesse envers le serveur
-    return all_sessions
+    target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+
+    spans = driver.find_elements(By.CSS_SELECTOR, "span.calendar-date-link.roller-item")
+    for span in spans:
+        cls = span.get_attribute("class") or ""
+        if "disabled" in cls:
+            continue
+
+        try:
+            num_el = span.find_element(By.CSS_SELECTOR, "div.num")
+            month_el = span.find_element(By.CSS_SELECTOR, "div.month")
+        except Exception:
+            continue
+
+        day_num_text = num_el.text.strip()
+        month_text = month_el.text.strip().lower()
+
+        try:
+            day_num = int(day_num_text)
+        except ValueError:
+            continue
+
+        month_num = _FR_MONTHS.get(month_text)
+        if month_num is None:
+            continue
+
+        # Determine year: if target month < current month, it's next year
+        # (unlikely for 3-week window, but handle gracefully)
+        year = target_date.year
+
+        if day_num == target_date.day and month_num == target_date.month:
+            return span
+
+    return None
+
+
+def scrape_cinema_day(cinema_name, cinema_id, date_str, driver=None):
+    """Scrape séances for one cinema on a specific date using Selenium.
+
+    If driver is provided, reuses it (for efficiency in scrape_all).
+    Otherwise creates a new headless Chrome instance (and closes it after).
+
+    date_str format: "2026-07-01" (YYYY-MM-DD)
+
+    Returns a list of session dicts:
+        {"cinema": str, "film": str, "date": str,
+         "heure": str, "version": str, "temperature": None}
+    Returns [] if the cinema is closed on that date or on error.
+    """
+    own_driver = driver is None
+    if own_driver:
+        driver = _make_driver()
+
+    try:
+        url = f"https://www.allocine.fr/seance/salle_gen_csalle={cinema_id}.html"
+        driver.get(url)
+
+        # Wait for the calendar to appear (proves JS has rendered)
+        try:
+            WebDriverWait(driver, 15).until(
+                EC.presence_of_element_located(
+                    (By.CSS_SELECTOR, "span.calendar-date-link.roller-item")
+                )
+            )
+        except Exception:
+            # No calendar → page failed to load
+            return []
+
+        # Check if this is today (the default view) — no click needed
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        if date_str == today_str:
+            # Just wait for sessions to appear
+            try:
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, ".card.entity-card"))
+                )
+            except Exception:
+                pass
+            return _parse_sessions(driver.page_source, cinema_name, date_str)
+
+        # Find and click the target date
+        span = _find_date_span(driver, date_str)
+        if span is None:
+            # Date not available (cinema closed or beyond the calendar range)
+            return []
+
+        driver.execute_script("arguments[0].click();", span)
+
+        # Wait for sessions to refresh after date click.
+        # Strategy: wait until the clicked span has the 'current' class
+        try:
+            WebDriverWait(driver, 10).until(
+                lambda d: "current" in (span.get_attribute("class") or "")
+            )
+        except Exception:
+            # Fallback: brief pause
+            time.sleep(2)
+
+        # Small extra pause to let session cards render
+        time.sleep(1)
+
+        return _parse_sessions(driver.page_source, cinema_name, date_str)
+
+    except Exception:
+        return []
+
+    finally:
+        if own_driver:
+            driver.quit()
+
+
+def scrape_all(progress_callback=None):
+    """Scrape all 9 cinemas for 21 days (3 weeks) using a single Selenium browser.
+
+    progress_callback(current, total, cinema_name) is called before each
+    cinema/date combination.
+
+    Returns a flat list of session dicts (without temperatures).
+    """
+    today = datetime.now().date()
+    dates = [(today + timedelta(days=i)).isoformat() for i in range(21)]
+
+    total = len(CINEMA_IDS) * len(dates)
+    current = 0
+    sessions = []
+
+    driver = _make_driver()
+    try:
+        for cinema_name, cinema_id in CINEMA_IDS.items():
+            for date_str in dates:
+                current += 1
+                if progress_callback:
+                    progress_callback(current, total, cinema_name)
+                day_sessions = scrape_cinema_day(
+                    cinema_name, cinema_id, date_str, driver=driver
+                )
+                sessions.extend(day_sessions)
+    finally:
+        driver.quit()
+
+    return sessions
