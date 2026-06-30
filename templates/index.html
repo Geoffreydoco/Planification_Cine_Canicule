@@ -718,10 +718,26 @@
     }).join('');
 
     // Show only selected day's sessions
-    const daySessions = (groups[selectedDay] || []).slice().sort(
-      (a, b) => a.cinema.localeCompare(b.cinema) || a.heure.localeCompare(b.heure)
-    );
-    const rowsHtml = daySessions.map(buildRowJour).join('');
+    const rawDay = (groups[selectedDay] || []);
+    let rowsHtml, theadHtml;
+
+    if (groupByFilm) {
+      const grouped = new Map();
+      rawDay.forEach(s => {
+        const key = `${s.cinema}|||${s.film}|||${s.version}`;
+        if (!grouped.has(key)) grouped.set(key, { cinema: s.cinema, film: s.film, version: s.version, sessions: [] });
+        grouped.get(key).sessions.push(s);
+      });
+      const groupList = [...grouped.values()].sort((a, b) =>
+        a.cinema.localeCompare(b.cinema) || a.film.localeCompare(b.film) || a.version.localeCompare(b.version)
+      );
+      rowsHtml  = groupList.map(buildGroupedRowJour).join('');
+      theadHtml = '<tr><th>Cinéma</th><th>Film</th><th>Durée</th><th>Séances</th></tr>';
+    } else {
+      const sorted = rawDay.slice().sort((a, b) => a.cinema.localeCompare(b.cinema) || a.heure.localeCompare(b.heure));
+      rowsHtml  = sorted.map(buildRowJour).join('');
+      theadHtml = '<tr><th>Cinéma</th><th>Heure</th><th>Durée</th><th>Film</th><th>🌡️</th></tr>';
+    }
 
     const d = new Date(selectedDay + 'T12:00:00');
     const fullLabel = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -731,9 +747,7 @@
       <div class="group">
         <div class="group-header">${capitalized}</div>
         <table>
-          <thead><tr>
-            <th>Cinéma</th><th>Heure</th><th>Durée</th><th>Film</th><th>🌡️</th>
-          </tr></thead>
+          <thead>${theadHtml}</thead>
           <tbody>${rowsHtml}</tbody>
         </table>
       </div>`;
