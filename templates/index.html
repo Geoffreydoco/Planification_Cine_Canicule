@@ -587,6 +587,53 @@
   }
 
   /* ────────────────────────────────────────────
+     Group-by-film helpers
+  ──────────────────────────────────────────── */
+  function maxTemp(sessions) {
+    const temps = sessions.map(s => s.temperature).filter(t => t !== null && t !== undefined);
+    return temps.length ? Math.max(...temps) : null;
+  }
+
+  function sessionBadge(s) {
+    const time = escHtml(s.heure);
+    if (s.temperature === null || s.temperature === undefined) {
+      return `<span style="white-space:nowrap;font-size:0.82rem;color:#aaa">${time}</span>`;
+    }
+    const color = tempColor(s.temperature);
+    return `<span style="white-space:nowrap;font-size:0.82rem;">${time}&nbsp;<span class="temp-badge" style="background:${color}">${s.temperature.toFixed(1)}&nbsp;°C</span></span>`;
+  }
+
+  function seancesCell(sessions) {
+    const sorted = sessions.slice().sort((a, b) => a.heure.localeCompare(b.heure));
+    return `<div style="display:flex;flex-wrap:wrap;gap:6px 10px;">${sorted.map(sessionBadge).join('')}</div>`;
+  }
+
+  function buildGroupedRowJour(group) {
+    const t = maxTemp(group.sessions);
+    const cls = rowClass(t);
+    const rep = group.sessions[0];
+    return `<tr class="${cls}">
+      <td>${escHtml(group.cinema)}</td>
+      <td>${filmCell(rep)}</td>
+      <td>${durationCell(rep)}</td>
+      <td>${seancesCell(group.sessions)}</td>
+    </tr>`;
+  }
+
+  function buildGroupedRowCinema(group) {
+    const t = maxTemp(group.sessions);
+    const cls = rowClass(t);
+    const rep = group.sessions[0];
+    const dateStr = new Date(group.date + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'short', day:'numeric', month:'short'});
+    return `<tr class="${cls}">
+      <td>${dateStr}</td>
+      <td>${filmCell(rep)}</td>
+      <td>${durationCell(rep)}</td>
+      <td>${seancesCell(group.sessions)}</td>
+    </tr>`;
+  }
+
+  /* ────────────────────────────────────────────
      Temperature summary bar (Vue A only)
   ──────────────────────────────────────────── */
   function renderTempSummary(sessions) {
