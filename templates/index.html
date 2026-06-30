@@ -371,7 +371,7 @@
       <input type="text" id="film-search" placeholder="Rechercher…" oninput="applyFilters()">
     </div>
 
-    <!-- Group by film toggle -->
+    <!-- Group by film toggle + advanced info -->
     <div class="filter-group">
       <h2>Options</h2>
       <label style="display:flex;align-items:center;gap:.45rem;font-size:0.82rem;color:var(--text);cursor:pointer;">
@@ -379,6 +379,12 @@
                onchange="groupByFilm=this.checked;applyFilters()"
                style="accent-color:var(--accent);width:14px;height:14px;flex-shrink:0;">
         Regrouper par film
+      </label>
+      <label style="display:flex;align-items:center;gap:.45rem;font-size:0.82rem;color:var(--text);cursor:pointer;margin-top:.35rem;">
+        <input type="checkbox" id="show-advanced"
+               onchange="showAdvancedInfo=this.checked;applyFilters()"
+               style="accent-color:var(--accent);width:14px;height:14px;flex-shrink:0;">
+        Infos avancées
       </label>
     </div>
 
@@ -405,6 +411,7 @@
   let allCinemas = [];
   let selectedDay = null;  // null = auto-select first available day
   let groupByFilm = true;
+  let showAdvancedInfo = false;
 
   /* ────────────────────────────────────────────
      Temperature helpers
@@ -575,7 +582,27 @@
       : `<span style="color:#555;font-size:0.82rem;">—</span>`;
   }
 
-  // Vue A row: Cinema | Heure | Durée | Film | Temp | 📅
+  function advancedCells(s) {
+    if (!showAdvancedInfo) return '';
+    const director = escHtml(s.director || '—');
+    const userRating = s.user_rating != null ? `⭐ ${s.user_rating.toFixed(1)}` : '—';
+    const pressRating = s.press_rating != null ? `📰 ${s.press_rating.toFixed(1)}` : '—';
+    const genres = s.genres && s.genres.length ? escHtml(s.genres.join(', ')) : '—';
+    const actors = s.actors && s.actors.length ? escHtml(s.actors.slice(0, 3).join(', ')) : '—';
+    const cell = 'font-size:0.78rem;color:#ccc;white-space:nowrap;';
+    return `<td style="${cell}">${director}</td>
+      <td style="${cell}">${userRating}</td>
+      <td style="${cell}">${pressRating}</td>
+      <td style="font-size:0.78rem;color:#aaa;">${genres}</td>
+      <td style="font-size:0.78rem;color:#ccc;">${actors}</td>`;
+  }
+
+  function advancedHeaders() {
+    if (!showAdvancedInfo) return '';
+    return '<th>Réalisateur</th><th>Public</th><th>Presse</th><th>Genres</th><th>Acteurs</th>';
+  }
+
+  // Vue A row: Cinema | Heure | Durée | Film | [avancé] | Temp | 📅
   function buildRowJour(s) {
     const cls = rowClass(s.temperature);
     return `<tr class="${cls}">
@@ -583,12 +610,13 @@
       <td>${escHtml(s.heure)}</td>
       <td>${durationCell(s)}</td>
       <td>${filmCell(s)}</td>
+      ${advancedCells(s)}
       <td>${tempBadge(s.temperature)}</td>
       <td>${calBtn(s)}</td>
     </tr>`;
   }
 
-  // Vue B row: Date | Heure | Durée | Film | Temp | 📅
+  // Vue B row: Date | Heure | Durée | Film | [avancé] | Temp | 📅
   function buildRowCinema(s) {
     const cls = rowClass(s.temperature);
     const dateStr = new Date(s.date + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'short', day:'numeric', month:'short'});
@@ -597,6 +625,7 @@
       <td>${escHtml(s.heure)}</td>
       <td>${durationCell(s)}</td>
       <td>${filmCell(s)}</td>
+      ${advancedCells(s)}
       <td>${tempBadge(s.temperature)}</td>
       <td>${calBtn(s)}</td>
     </tr>`;
@@ -641,6 +670,7 @@
       <td>${escHtml(group.cinema)}</td>
       <td>${filmCell(rep)}</td>
       <td>${durationCell(rep)}</td>
+      ${advancedCells(rep)}
       <td>${seancesCell(group.sessions)}</td>
     </tr>`;
   }
@@ -654,6 +684,7 @@
       <td>${dateStr}</td>
       <td>${filmCell(rep)}</td>
       <td>${durationCell(rep)}</td>
+      ${advancedCells(rep)}
       <td>${seancesCell(group.sessions)}</td>
     </tr>`;
   }
@@ -806,11 +837,11 @@
         a.cinema.localeCompare(b.cinema) || a.film.localeCompare(b.film) || (a.version || '').localeCompare(b.version || '')
       );
       rowsHtml  = groupList.map(buildGroupedRowJour).join('');
-      theadHtml = '<tr><th>Cinéma</th><th>Film</th><th>Durée</th><th>Séances</th></tr>';
+      theadHtml = `<tr><th>Cinéma</th><th>Film</th><th>Durée</th>${advancedHeaders()}<th>Séances</th></tr>`;
     } else {
       const sorted = rawDay.slice().sort((a, b) => a.cinema.localeCompare(b.cinema) || a.heure.localeCompare(b.heure));
       rowsHtml  = sorted.map(buildRowJour).join('');
-      theadHtml = '<tr><th>Cinéma</th><th>Heure</th><th>Durée</th><th>Film</th><th>🌡️</th><th></th></tr>';
+      theadHtml = `<tr><th>Cinéma</th><th>Heure</th><th>Durée</th><th>Film</th>${advancedHeaders()}<th>🌡️</th><th></th></tr>`;
     }
 
     const d = new Date(selectedDay + 'T12:00:00');
@@ -853,14 +884,14 @@
           a.date.localeCompare(b.date) || a.film.localeCompare(b.film) || (a.version || '').localeCompare(b.version || '')
         );
         rowsHtml  = groupList.map(buildGroupedRowCinema).join('');
-        theadHtml = '<tr><th>Date</th><th>Film</th><th>Durée</th><th>Séances</th></tr>';
+        theadHtml = `<tr><th>Date</th><th>Film</th><th>Durée</th>${advancedHeaders()}<th>Séances</th></tr>`;
       } else {
         const sorted = groups[cinema].slice().sort((a, b) => {
           const d = a.date.localeCompare(b.date);
           return d !== 0 ? d : a.heure.localeCompare(b.heure);
         });
         rowsHtml  = sorted.map(buildRowCinema).join('');
-        theadHtml = '<tr><th>Date</th><th>Heure</th><th>Durée</th><th>Film</th><th>🌡️</th><th></th></tr>';
+        theadHtml = `<tr><th>Date</th><th>Heure</th><th>Durée</th><th>Film</th>${advancedHeaders()}<th>🌡️</th><th></th></tr>`;
       }
       return `<div class="group">
         <div class="group-header">${escHtml(cinema)}</div>

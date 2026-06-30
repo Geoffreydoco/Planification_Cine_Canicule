@@ -66,6 +66,11 @@ def _api_to_sessions(api_result, cinema_name, date_str):
         duration = film.get("duration", "")
         poster_url = film.get("poster_url", "")
         synopsis = film.get("synopsis", "")
+        director = film.get("director", "")
+        user_rating = film.get("user_rating")
+        press_rating = film.get("press_rating")
+        genres = film.get("genres", [])
+        actors = film.get("actors", [])
         for showtime in film.get("showtimes", []):
             starts_at = showtime.get("startsAt", "")
             # startsAt is ISO format: "2026-06-30T14:00:00"
@@ -85,6 +90,11 @@ def _api_to_sessions(api_result, cinema_name, date_str):
                 "duration": duration,
                 "poster_url": poster_url,
                 "synopsis": synopsis,
+                "director": director,
+                "user_rating": user_rating,
+                "press_rating": press_rating,
+                "genres": genres,
+                "actors": actors,
                 "date": date_str,
                 "heure": heure,
                 "version": version,
@@ -153,6 +163,36 @@ def _get_showtime_enriched(api_instance, cinema_id, date_str):
             raw_synopsis = movie.get("synopsisFull") or ""
             synopsis = re.sub(r"<[^>]+>", " ", raw_synopsis).strip()
 
+            # Director(s)
+            director_parts = []
+            for credit in (movie.get("credits") or []):
+                pos = (credit.get("position") or {}).get("name", "")
+                if pos in ("DIRECTOR", "CO_DIRECTOR"):
+                    person = credit.get("person") or {}
+                    name = f"{person.get('firstName', '')} {person.get('lastName', '')}".strip()
+                    if name:
+                        director_parts.append(name)
+            director = ", ".join(director_parts)
+
+            # Ratings
+            stats = movie.get("stats") or {}
+            user_rating = (stats.get("userRating") or {}).get("score")
+            press_rating = (stats.get("pressReview") or {}).get("score")
+
+            # Genres
+            genres = [g["translate"] for g in (movie.get("genres") or []) if g.get("translate")]
+
+            # Main cast (first 4)
+            cast_edges = (movie.get("cast") or {}).get("edges") or []
+            actors = []
+            for edge in cast_edges[:4]:
+                node = edge.get("node") or {}
+                person = node.get("actor") or node.get("voiceActor") or node.get("originalVoiceActor")
+                if person:
+                    name = f"{person.get('firstName', '')} {person.get('lastName', '')}".strip()
+                    if name:
+                        actors.append(name)
+
             showtimes = []
             seen_ids = []
             for showtimes_key in element.get("showtimes", {}).keys():
@@ -171,6 +211,11 @@ def _get_showtime_enriched(api_instance, cinema_id, date_str):
                 "duration": duration,
                 "poster_url": poster_url,
                 "synopsis": synopsis,
+                "director": director,
+                "user_rating": user_rating,
+                "press_rating": press_rating,
+                "genres": genres,
+                "actors": actors,
                 "showtimes": showtimes,
             })
     return formatted_data
