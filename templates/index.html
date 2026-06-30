@@ -254,6 +254,46 @@
       scrollbar-color: #3a3a5a transparent;
     }
 
+    /* ── Film tooltip ── */
+    #film-tooltip {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      width: min(340px, calc(100vw - 24px));
+      max-height: calc(100vh - 24px);
+      overflow-y: auto;
+      background: #0f1b35;
+      border: 1px solid #2a3a6a;
+      border-radius: 10px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.7);
+      padding: 12px;
+      pointer-events: none;
+    }
+    #film-tooltip img {
+      width: 100%;
+      max-height: min(240px, 35vh);
+      object-fit: contain;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      display: block;
+    }
+    #film-tooltip .tt-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #e0e0e0;
+      margin-bottom: 6px;
+    }
+    #film-tooltip .tt-synopsis {
+      font-size: 0.78rem;
+      color: #9999bb;
+      line-height: 1.5;
+      max-height: min(140px, 22vh);
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 7;
+      -webkit-box-orient: vertical;
+    }
+
     /* ── Responsive ── */
     @media (max-width: 640px) {
       aside { width: 100%; min-height: unset; border-right: none; border-bottom: 1px solid var(--border); }
@@ -262,6 +302,12 @@
   </style>
 </head>
 <body>
+
+<div id="film-tooltip">
+  <img id="tt-img" src="" alt="">
+  <div class="tt-title" id="tt-title"></div>
+  <div class="tt-synopsis" id="tt-synopsis"></div>
+</div>
 
 <header>
   <h1>🎬 Planificateur Ciné Canicule</h1>
@@ -305,6 +351,17 @@
       <input type="text" id="film-search" placeholder="Rechercher…" oninput="applyFilters()">
     </div>
 
+    <!-- Group by film toggle -->
+    <div class="filter-group">
+      <h2>Options</h2>
+      <label style="display:flex;align-items:center;gap:.45rem;font-size:0.82rem;color:var(--text);cursor:pointer;">
+        <input type="checkbox" id="group-by-film" checked
+               onchange="groupByFilm=this.checked;applyFilters()"
+               style="accent-color:var(--accent);width:14px;height:14px;flex-shrink:0;">
+        Regrouper par film
+      </label>
+    </div>
+
   </aside>
 
   <div id="content">
@@ -327,6 +384,7 @@
   let selectedCinemas = new Set();
   let allCinemas = [];
   let selectedDay = null;  // null = auto-select first available day
+  let groupByFilm = true;
 
   /* ────────────────────────────────────────────
      Temperature helpers
@@ -386,18 +444,110 @@
     return 'row-' + tempClass(t);
   }
 
+  // ── Film tooltip ──────────────────────────────────────────────
+  const tooltip   = document.getElementById('film-tooltip');
+  const ttImg     = document.getElementById('tt-img');
+  const ttTitle   = document.getElementById('tt-title');
+  const ttSynopsis= document.getElementById('tt-synopsis');
+
+  function showTooltip(e, s) {
+    ttTitle.textContent   = s.film || '';
+    ttSynopsis.textContent= s.synopsis || '(pas de synopsis disponible)';
+    if (s.poster_url) {
+      ttImg.src   = s.poster_url;
+      ttImg.style.display = 'block';
+    } else {
+      ttImg.style.display = 'none';
+    }
+    positionTooltip(e);
+    tooltip.style.display = 'block';
+  }
+
+  function positionTooltip(e) {
+    const gap  = 14;
+    const pad  = 8;
+    const vw   = window.innerWidth;
+    const vh   = window.innerHeight;
+    const tw   = tooltip.offsetWidth  || 340;
+    const th   = tooltip.offsetHeight || 280;
+
+    // Prefer right of cursor, fall back to left
+    let x = e.clientX + gap;
+    if (x + tw > vw - pad) x = e.clientX - tw - gap;
+
+    // Prefer below cursor, fall back to above
+    let y = e.clientY + gap;
+    if (y + th > vh - pad) y = e.clientY - th - gap;
+
+    // Hard clamp so it never exits the viewport
+    x = Math.max(pad, Math.min(x, vw - tw - pad));
+    y = Math.max(pad, Math.min(y, vh - th - pad));
+
+    tooltip.style.left = x + 'px';
+    tooltip.style.top  = y + 'px';
+  }
+
+  document.addEventListener('mousemove', e => {
+    if (tooltip.style.display === 'block') positionTooltip(e);
+  });
+
+  function hideTooltip() {
+    tooltip.style.display = 'none';
+  }
+
+  // Attach tooltip to a span wrapping the film name; used in filmCell
+  let _tooltipSessions = {};
+  function registerTooltip(key, s) { _tooltipSessions[key] = s; }
+
   function filmCell(s) {
     const escapedFilm = escHtml(s.film);
     const versionTag = `<small style="color:var(--muted)">${escHtml(s.version || '')}</small>`;
+    const hasInfo = s.poster_url || s.synopsis;
+    const cursor  = hasInfo ? 'help' : 'default';
+
+    // Encode data directly as JSON attributes to avoid a registry lookup
+    const dataFilm     = escHtml(JSON.stringify(s.film     || ''));
+    const dataSynopsis = escHtml(JSON.stringify(s.synopsis || ''));
+    const dataPoster   = escHtml(JSON.stringify(s.poster_url || ''));
+
+    const hoverAttrs = hasInfo
+      ? `onmouseenter="ttShow(event,this)" onmouseleave="ttHide()"`
+      : '';
+    const spanStyle = `cursor:${cursor};`;
+
+    const inner = `<span
+      style="${spanStyle}"
+      data-film="${dataFilm}"
+      data-synopsis="${dataSynopsis}"
+      data-poster="${dataPoster}"
+      ${hoverAttrs}
+    >${escapedFilm}</span>`;
+
     if (s.film_url) {
       return `<a href="${escHtml(s.film_url)}" target="_blank" rel="noopener"
         style="color:#4fc3f7;text-decoration:none;"
         onmouseover="this.style.textDecoration='underline'"
         onmouseout="this.style.textDecoration='none'"
-      >${escapedFilm}</a> ${versionTag}`;
+      >${inner}</a> ${versionTag}`;
     }
-    return `${escapedFilm} ${versionTag}`;
+    return `${inner} ${versionTag}`;
   }
+
+  function ttShow(e, el) {
+    ttTitle.textContent    = JSON.parse(el.dataset.film     || '""');
+    ttSynopsis.textContent = JSON.parse(el.dataset.synopsis || '""') || '(pas de synopsis disponible)';
+    const poster = JSON.parse(el.dataset.poster || '""');
+    if (poster) {
+      ttImg.src = poster;
+      ttImg.style.display = 'block';
+    } else {
+      ttImg.style.display = 'none';
+    }
+    positionTooltip(e);
+    tooltip.style.display = 'block';
+  }
+
+  function ttHide() { tooltip.style.display = 'none'; }
 
   function durationCell(s) {
     return s.duration
