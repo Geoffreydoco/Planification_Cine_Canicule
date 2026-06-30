@@ -729,7 +729,7 @@
         grouped.get(key).sessions.push(s);
       });
       const groupList = [...grouped.values()].sort((a, b) =>
-        a.cinema.localeCompare(b.cinema) || a.film.localeCompare(b.film) || a.version.localeCompare(b.version)
+        a.cinema.localeCompare(b.cinema) || a.film.localeCompare(b.film) || (a.version || '').localeCompare(b.version || '')
       );
       rowsHtml  = groupList.map(buildGroupedRowJour).join('');
       theadHtml = '<tr><th>Cinéma</th><th>Film</th><th>Durée</th><th>Séances</th></tr>';
@@ -776,7 +776,7 @@
           grouped.get(key).sessions.push(s);
         });
         const groupList = [...grouped.values()].sort((a, b) =>
-          a.date.localeCompare(b.date) || a.film.localeCompare(b.film) || a.version.localeCompare(b.version)
+          a.date.localeCompare(b.date) || a.film.localeCompare(b.film) || (a.version || '').localeCompare(b.version || '')
         );
         rowsHtml  = groupList.map(buildGroupedRowCinema).join('');
         theadHtml = '<tr><th>Date</th><th>Film</th><th>Durée</th><th>Séances</th></tr>';
