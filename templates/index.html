@@ -767,17 +767,31 @@
     if (cinemas.length === 0) return '';
 
     return cinemas.map(cinema => {
-      const rows = groups[cinema].slice().sort((a,b) => {
-        const d = a.date.localeCompare(b.date);
-        return d !== 0 ? d : a.heure.localeCompare(b.heure);
-      });
-      const rowsHtml = rows.map(buildRowCinema).join('');
+      let rowsHtml, theadHtml;
+      if (groupByFilm) {
+        const grouped = new Map();
+        groups[cinema].forEach(s => {
+          const key = `${s.film}|||${s.date}|||${s.version}`;
+          if (!grouped.has(key)) grouped.set(key, { film: s.film, date: s.date, version: s.version, sessions: [] });
+          grouped.get(key).sessions.push(s);
+        });
+        const groupList = [...grouped.values()].sort((a, b) =>
+          a.date.localeCompare(b.date) || a.film.localeCompare(b.film) || a.version.localeCompare(b.version)
+        );
+        rowsHtml  = groupList.map(buildGroupedRowCinema).join('');
+        theadHtml = '<tr><th>Date</th><th>Film</th><th>Durée</th><th>Séances</th></tr>';
+      } else {
+        const sorted = groups[cinema].slice().sort((a, b) => {
+          const d = a.date.localeCompare(b.date);
+          return d !== 0 ? d : a.heure.localeCompare(b.heure);
+        });
+        rowsHtml  = sorted.map(buildRowCinema).join('');
+        theadHtml = '<tr><th>Date</th><th>Heure</th><th>Durée</th><th>Film</th><th>🌡️</th></tr>';
+      }
       return `<div class="group">
         <div class="group-header">${escHtml(cinema)}</div>
         <table>
-          <thead><tr>
-            <th>Date</th><th>Heure</th><th>Durée</th><th>Film</th><th>🌡️</th>
-          </tr></thead>
+          <thead>${theadHtml}</thead>
           <tbody>${rowsHtml}</tbody>
         </table>
       </div>`;
