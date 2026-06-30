@@ -7,7 +7,7 @@ Architecture post-allocineAPI:
 """
 from unittest.mock import patch, Mock, MagicMock
 import scraper
-from scraper import _api_to_sessions, scrape_cinema_day, scrape_all, CINEMA_IDS, _format_runtime
+from scraper import _api_to_sessions, scrape_cinema_day, scrape_all, CINEMA_IDS
 
 # ---------------------------------------------------------------------------
 # Sample API response matching our enriched structure:
@@ -21,6 +21,8 @@ SAMPLE_API_RESPONSE = [
         "title": "Dune : Partie 2",
         "film_url": "https://www.allocine.fr/film/fichefilm_gen_cfilm=223395.html",
         "duration": "2h 46min",
+        "poster_url": "https://fr.web.img6.acsta.net/pictures/24/02/28/dune2.jpg",
+        "synopsis": "Paul Atréides s'unit aux Fremen pour mener la guerre contre les Harkonnen.",
         "showtimes": [
             {"startsAt": "2026-06-30T14:00:00", "diffusionVersion": "DUBBED"},
             {"startsAt": "2026-06-30T17:30:00", "diffusionVersion": "DUBBED"},
@@ -31,6 +33,8 @@ SAMPLE_API_RESPONSE = [
         "title": "Le Comte de Monte-Cristo",
         "film_url": "https://www.allocine.fr/film/fichefilm_gen_cfilm=278154.html",
         "duration": "4h 01min",
+        "poster_url": "",
+        "synopsis": "",
         "showtimes": [
             {"startsAt": "2026-06-30T15:00:00", "diffusionVersion": "DUBBED"},
         ],
@@ -56,7 +60,8 @@ class TestApiToSessions:
 
     def test_all_required_keys_present(self):
         result = _api_to_sessions(SAMPLE_API_RESPONSE, "Pathé Bellecour", "2026-06-30")
-        required = {"cinema", "film", "film_url", "duration", "date", "heure", "version", "temperature"}
+        required = {"cinema", "film", "film_url", "duration", "poster_url", "synopsis",
+                    "date", "heure", "version", "temperature"}
         for session in result:
             assert required == set(session.keys()), f"Missing keys in {session}"
 
@@ -83,6 +88,26 @@ class TestApiToSessions:
         ]}]
         result = _api_to_sessions(response, "Test", "2026-06-30")
         assert result[0]["duration"] == ""
+
+    def test_poster_url_present(self):
+        result = _api_to_sessions(SAMPLE_API_RESPONSE, "Pathé Bellecour", "2026-06-30")
+        dune = [s for s in result if s["film"] == "Dune : Partie 2"][0]
+        assert "poster_url" in dune
+        assert dune["poster_url"] != ""
+
+    def test_synopsis_present(self):
+        result = _api_to_sessions(SAMPLE_API_RESPONSE, "Pathé Bellecour", "2026-06-30")
+        dune = [s for s in result if s["film"] == "Dune : Partie 2"][0]
+        assert "synopsis" in dune
+        assert "Atréides" in dune["synopsis"]
+
+    def test_missing_poster_synopsis_defaults_empty(self):
+        response = [{"title": "Film Test", "showtimes": [
+            {"startsAt": "2026-06-30T10:00:00", "diffusionVersion": "DUBBED"}
+        ]}]
+        result = _api_to_sessions(response, "Test", "2026-06-30")
+        assert result[0]["poster_url"] == ""
+        assert result[0]["synopsis"] == ""
 
     def test_temperature_is_none(self):
         result = _api_to_sessions(SAMPLE_API_RESPONSE, "Pathé Bellecour", "2026-06-30")
@@ -236,13 +261,13 @@ class TestScrapeAll:
             scrape_all()
         assert mock_enrich.call_count == len(CINEMA_IDS) * 21
 
-    def test_creates_single_api_instance(self):
-        """scrape_all must create exactly one allocineAPI instance."""
+    def test_creates_one_api_instance_per_cinema(self):
+        """scrape_all must create one allocineAPI instance per cinema (parallel workers)."""
         with patch("scraper.allocineAPI") as MockAPI, \
              patch("scraper.time.sleep"), \
              patch("scraper._get_showtime_enriched", return_value=[]):
             scrape_all()
-        assert MockAPI.call_count == 1
+        assert MockAPI.call_count == len(CINEMA_IDS)
 
     def test_aggregates_all_sessions(self):
         """Sessions from all cinema/date calls are concatenated."""
@@ -310,38 +335,3 @@ class TestScrapeAll:
 
         assert isinstance(result, list)
         assert call_count == len(CINEMA_IDS) * 21
-
-
-# ---------------------------------------------------------------------------
-# Tests for _format_runtime helper
-# ---------------------------------------------------------------------------
-
-class TestFormatRuntime:
-    """Tests for the _format_runtime helper."""
-
-    def test_hours_and_minutes(self):
-        assert _format_runtime(166) == "2h 46min"
-
-    def test_hours_only(self):
-        assert _format_runtime(120) == "2h"
-
-    def test_minutes_only(self):
-        assert _format_runtime(45) == "45min"
-
-    def test_zero_returns_empty(self):
-        assert _format_runtime(0) == ""
-
-    def test_none_returns_empty(self):
-        assert _format_runtime(None) == ""
-
-    def test_negative_returns_empty(self):
-        assert _format_runtime(-10) == ""
-
-    def test_single_minute(self):
-        assert _format_runtime(1) == "1min"
-
-    def test_sixty_minutes(self):
-        assert _format_runtime(60) == "1h"
-
-    def test_zero_minutes_with_hour(self):
-        assert _format_runtime(180) == "3h"
