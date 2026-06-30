@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ciné Canicule 🎬🌡️</title>
+  <title>Planificateur Ciné Canicule 🎬🌡️</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -70,16 +70,8 @@
     }
     #btn-refresh:disabled { opacity: .5; cursor: default; }
 
-    .spinner {
-      display: none;
-      width: 14px; height: 14px;
-      border: 2px solid rgba(255,255,255,.4);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-    }
-    .spinner.active { display: inline-block; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .toggle-btn { padding: 3px 10px; background: transparent; border: 1px solid #3a3a5a; color: #aaa; border-radius: 3px; cursor: pointer; font-size: 0.78rem; }
+    .toggle-btn:hover { border-color: #e94560; color: #e94560; }
 
     /* ── Main layout ── */
     main {
@@ -162,19 +154,6 @@
     }
     #film-search::placeholder { color: var(--muted); }
     #film-search:focus { outline: none; border-color: var(--accent); }
-
-    /* Temp slider */
-    #temp-display {
-      font-size: 0.78rem;
-      color: var(--muted);
-      display: block;
-      margin-top: .3rem;
-    }
-    #temp-slider {
-      width: 100%;
-      accent-color: var(--accent);
-      margin-top: .45rem;
-    }
 
     /* ── Content area ── */
     #content {
@@ -266,13 +245,21 @@
 <body>
 
 <header>
-  <h1>🎬 Ciné Canicule</h1>
+  <h1>🎬 Planificateur Ciné Canicule</h1>
   <div id="meta">Chargement…</div>
   <button id="btn-refresh" onclick="doRefresh()">
-    <span class="spinner" id="spinner"></span>
     <span id="btn-label">🔄 Actualiser</span>
   </button>
 </header>
+<div id="progress-area" style="display:none;width:100%;padding:8px 24px;background:#0f3460;">
+  <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+    <span id="progress-text" style="font-size:0.8rem;color:#aaa;"></span>
+    <span id="progress-pct" style="font-size:0.8rem;color:#aaa;"></span>
+  </div>
+  <div style="background:#1a1a2e;border-radius:4px;height:8px;overflow:hidden;">
+    <div id="progress-bar" style="height:100%;background:#e94560;width:0%;transition:width 0.3s ease;"></div>
+  </div>
+</div>
 
 <main>
   <aside>
@@ -286,7 +273,11 @@
     <!-- Cinema filter -->
     <div class="filter-group">
       <h2>Cinémas</h2>
-      <div id="cinema-checkboxes"></div>
+      <div style="display:flex;gap:8px;margin-bottom:6px;">
+        <button class="toggle-btn" onclick="setCinemasAll(true)">Tout cocher</button>
+        <button class="toggle-btn" onclick="setCinemasAll(false)">Tout décocher</button>
+      </div>
+      <div id="cinema-checks"></div>
     </div>
 
     <!-- Film search -->
@@ -295,12 +286,6 @@
       <input type="text" id="film-search" placeholder="Rechercher…" oninput="applyFilters()">
     </div>
 
-    <!-- Temperature threshold -->
-    <div class="filter-group">
-      <h2>Température min.</h2>
-      <input type="range" id="temp-slider" min="0" max="45" value="0" oninput="onSlider()">
-      <span id="temp-display">0 °C et plus</span>
-    </div>
   </aside>
 
   <div id="content">
@@ -350,18 +335,12 @@
   ──────────────────────────────────────────── */
   function getFilteredSessions() {
     const filmQuery = document.getElementById('film-search').value.trim().toLowerCase();
-    const minTemp   = parseInt(document.getElementById('temp-slider').value, 10);
 
     return DATA.sessions.filter(s => {
       // Cinema filter
       if (!selectedCinemas.has(s.cinema)) return false;
       // Film filter
       if (filmQuery && !s.film.toLowerCase().includes(filmQuery)) return false;
-      // Temperature filter
-      if (minTemp > 0) {
-        if (s.temperature === null || s.temperature === undefined) return false;
-        if (s.temperature < minTemp) return false;
-      }
       return true;
     });
   }
@@ -417,7 +396,7 @@
     if (dates.length === 0) return '';
 
     return dates.map(date => {
-      const rows = groups[date].slice().sort((a,b) => a.heure.localeCompare(b.heure));
+      const rows = groups[date].slice().sort((a,b) => a.cinema.localeCompare(b.cinema) || a.heure.localeCompare(b.heure));
       const label = new Date(date + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'});
       const rowsHtml = rows.map(buildRowJour).join('');
       return `<div class="group">
@@ -498,37 +477,84 @@
   }
 
   /* ────────────────────────────────────────────
-     Slider
-  ──────────────────────────────────────────── */
-  function onSlider() {
-    const val = document.getElementById('temp-slider').value;
-    const label = val === '0' ? '0 °C et plus' : `≥ ${val} °C`;
-    document.getElementById('temp-display').textContent = label;
-    applyFilters();
-  }
-
-  /* ────────────────────────────────────────────
      Refresh
   ──────────────────────────────────────────── */
   async function doRefresh() {
-    const btn     = document.getElementById('btn-refresh');
-    const spinner = document.getElementById('spinner');
-    const label   = document.getElementById('btn-label');
+    const btn = document.getElementById('btn-refresh');
+    const progressArea = document.getElementById('progress-area');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
 
     btn.disabled = true;
-    spinner.classList.add('active');
-    label.textContent = 'Actualisation…';
+    btn.textContent = 'Actualisation...';
+    progressArea.style.display = 'block';
+    progressBar.style.width = '0%';
+    progressText.textContent = 'Démarrage...';
 
     try {
-      const resp = await fetch('/refresh', { method: 'POST' });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      window.location.reload();
-    } catch (err) {
-      alert('Erreur lors de l\'actualisation : ' + err.message);
+      const startResp = await fetch('/refresh', { method: 'POST' });
+      if (!startResp.ok) {
+        const err = await startResp.json();
+        if (err.status === 'already_running') {
+          progressText.textContent = 'Actualisation déjà en cours...';
+          pollProgress();
+          return;
+        }
+        throw new Error('Erreur démarrage: ' + startResp.status);
+      }
+      pollProgress();
+    } catch (e) {
+      alert('Erreur : ' + e.message);
       btn.disabled = false;
-      spinner.classList.remove('active');
-      label.textContent = '🔄 Actualiser';
+      btn.textContent = '🔄 Actualiser';
+      progressArea.style.display = 'none';
     }
+  }
+
+  function pollProgress() {
+    const btn = document.getElementById('btn-refresh');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+
+    const interval = setInterval(async () => {
+      try {
+        const resp = await fetch('/progress');
+        const state = await resp.json();
+        const pct = state.total > 0 ? Math.round(state.current / state.total * 100) : 0;
+        progressBar.style.width = pct + '%';
+        progressText.textContent = state.cinema
+          ? `${state.current}/${state.total} — ${state.cinema}`
+          : 'En cours...';
+
+        if (state.done) {
+          clearInterval(interval);
+          if (state.error) {
+            alert('Erreur lors du scraping : ' + state.error);
+            btn.disabled = false;
+            btn.textContent = '🔄 Actualiser';
+            document.getElementById('progress-area').style.display = 'none';
+          } else {
+            window.location.reload();
+          }
+        }
+      } catch (e) {
+        clearInterval(interval);
+        alert('Erreur réseau : ' + e.message);
+        btn.disabled = false;
+        btn.textContent = '🔄 Actualiser';
+        document.getElementById('progress-area').style.display = 'none';
+      }
+    }, 2000);
+  }
+
+  function setCinemasAll(checked) {
+    document.querySelectorAll('#cinema-checks input[type="checkbox"]').forEach(cb => cb.checked = checked);
+    if (checked) {
+      allCinemas.forEach(c => selectedCinemas.add(c));
+    } else {
+      selectedCinemas.clear();
+    }
+    applyFilters();
   }
 
   /* ────────────────────────────────────────────
@@ -549,7 +575,7 @@
     allCinemas = [...new Set(DATA.sessions.map(s => s.cinema))].sort();
     selectedCinemas = new Set(allCinemas);
 
-    const container = document.getElementById('cinema-checkboxes');
+    const container = document.getElementById('cinema-checks');
     if (allCinemas.length === 0) {
       container.innerHTML = '<span style="color:var(--muted);font-size:.8rem">Aucun cinéma</span>';
     } else {

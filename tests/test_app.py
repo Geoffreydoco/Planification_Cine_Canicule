@@ -41,13 +41,31 @@ def test_index_with_data(client, tmp_path, monkeypatch):
     assert b"Dune 2" in resp.data
 
 
-def test_refresh_calls_run_scrape(client):
-    with patch("app.run_scrape", return_value=42):
+def test_refresh_starts_background_scrape(client):
+    with patch("app.threading.Thread") as mock_thread:
+        mock_thread.return_value.start = lambda: None
         resp = client.post("/refresh")
     assert resp.status_code == 200
     body = json.loads(resp.data)
-    assert body["status"] == "ok"
-    assert body["count"] == 42
+    assert body["status"] == "started"
+
+
+def test_progress_endpoint(client):
+    resp = client.get("/progress")
+    assert resp.status_code == 200
+    body = json.loads(resp.data)
+    assert "current" in body
+    assert "total" in body
+    assert "done" in body
+
+
+def test_refresh_rejects_concurrent_scrape(client, monkeypatch):
+    monkeypatch.setattr(flask_app, "_scrape_state", {
+        "running": True, "current": 0, "total": 189,
+        "cinema": "", "done": False, "count": 0, "error": None
+    })
+    resp = client.post("/refresh")
+    assert resp.status_code == 409
 
 
 def test_load_sessions_returns_empty_when_no_file(tmp_path, monkeypatch):

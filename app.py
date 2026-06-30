@@ -12,6 +12,12 @@ from weather import fetch_temperatures, get_temperature
 app = Flask(__name__)
 DATA_FILE = os.path.join("data", "sessions.json")
 
+_scrape_lock = threading.Lock()
+_scrape_state = {
+    "running": False, "current": 0, "total": 189,
+    "cinema": "", "done": False, "count": 0, "error": None
+}
+
 
 def load_sessions():
     if not os.path.exists(DATA_FILE):
@@ -48,16 +54,41 @@ def index():
     )
 
 
+def _run_scrape_background():
+    def cb(current, total, cinema_name):
+        with _scrape_lock:
+            _scrape_state.update({"current": current, "total": total, "cinema": cinema_name})
+    try:
+        count = run_scrape(progress_callback=cb)
+        with _scrape_lock:
+            _scrape_state.update({"done": True, "count": count, "running": False})
+    except Exception as e:
+        with _scrape_lock:
+            _scrape_state.update({"done": True, "error": str(e), "running": False})
+
+
 @app.route("/refresh", methods=["POST"])
 def refresh():
-    count = run_scrape()
-    data = load_sessions()
-    return jsonify({"status": "ok", "count": count, "updated_at": data["updated_at"]})
+    with _scrape_lock:
+        if _scrape_state["running"]:
+            return jsonify({"status": "already_running"}), 409
+        _scrape_state.update({
+            "running": True, "current": 0, "total": 189,
+            "cinema": "", "done": False, "count": 0, "error": None
+        })
+    threading.Thread(target=_run_scrape_background, daemon=True).start()
+    return jsonify({"status": "started"})
+
+
+@app.route("/progress")
+def progress():
+    with _scrape_lock:
+        return jsonify(dict(_scrape_state))
 
 
 if __name__ == "__main__":
     if not os.path.exists(DATA_FILE) and os.environ.get("TESTING") != "1":
-        print("Premier lancement — scraping initial (~3 min)...")
+        print("Planificateur Ciné Canicule — scraping initial (~3 min)...")
         run_scrape()
     if os.environ.get("TESTING") != "1":
         threading.Timer(1.0, lambda: webbrowser.open("http://localhost:5000")).start()
