@@ -22,6 +22,25 @@ def fetch_temperatures():
     return dict(zip(times, temps))
 
 
+def fetch_daily_minmax():
+    """Retourne {date_str: {"min": float, "max": float}} pour les 16 prochains jours."""
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude": LYON_LAT,
+        "longitude": LYON_LON,
+        "daily": "temperature_2m_min,temperature_2m_max",
+        "timezone": "Europe/Paris",
+        "forecast_days": 16,
+    }
+    r = requests.get(url, params=params, timeout=10)
+    r.raise_for_status()
+    data = r.json()
+    dates = data["daily"]["time"]
+    mins  = data["daily"]["temperature_2m_min"]
+    maxs  = data["daily"]["temperature_2m_max"]
+    return {d: {"min": mn, "max": mx} for d, mn, mx in zip(dates, mins, maxs)}
+
+
 def get_temperature(temps_dict, date_str, heure_str):
     """Retourne la température pour une date et une heure AlloCiné.
     Gère les formats '14h30' et '14:30'. Arrondit à l'heure inférieure.

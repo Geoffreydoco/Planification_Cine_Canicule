@@ -14,7 +14,7 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from scraper import scrape_all
-from weather import fetch_temperatures, get_temperature
+from weather import fetch_temperatures, get_temperature, fetch_daily_minmax
 
 OUT_DIR = "_site"
 
@@ -25,12 +25,14 @@ def main():
 
     print("Fetching temperatures...")
     temps = fetch_temperatures()
+    daily_temps = fetch_daily_minmax()
     for s in sessions:
         s["temperature"] = get_temperature(temps, s["date"], s["heure"])
 
     data = {
         "updated_at": datetime.now().isoformat(timespec="seconds"),
         "sessions": sessions,
+        "daily_temps": daily_temps,
     }
 
     os.makedirs(OUT_DIR, exist_ok=True)

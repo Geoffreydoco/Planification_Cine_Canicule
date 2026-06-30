@@ -712,30 +712,29 @@
      Temperature summary bar (Vue A only)
   ──────────────────────────────────────────── */
   function renderTempSummary(sessions) {
-    const datesWithTemp = getDatesWithTemperatures(sessions);
-    const byDate = {};
-    sessions.forEach(s => {
-      if (datesWithTemp.has(s.date) && s.temperature !== null && s.temperature !== undefined) {
-        (byDate[s.date] = byDate[s.date] || []).push(s.temperature);
-      }
-    });
-    const dates = Object.keys(byDate).sort();
+    const dailyTemps = DATA.daily_temps || {};
+    // Only show dates that have at least one session in the filtered set
+    const datesWithSession = new Set(sessions.map(s => s.date));
+    const dates = Object.keys(dailyTemps).filter(d => datesWithSession.has(d)).sort();
     if (!dates.length) return '';
 
     const items = dates.map(date => {
-      const temps = byDate[date];
-      const min = Math.round(Math.min(...temps));
-      const max = Math.round(Math.max(...temps));
+      const dt = dailyTemps[date];
+      if (!dt) return '';
+      const min = Math.round(dt.min);
+      const max = Math.round(dt.max);
       const d = new Date(date + 'T12:00:00');
       const label = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
       const borderColor = tempColor(max) || '#555';
-      const isActive = date === selectedDay;
+      const isActive = currentView === 'jour' && date === selectedDay;
       const activeBg = isActive ? 'background:rgba(233,69,96,0.15);' : '';
-      return `<div onclick="selectDay('${date}')" style="text-align:center;padding:6px 12px;border-radius:6px;border:1px solid ${borderColor};min-width:72px;cursor:pointer;transition:background 0.15s;${activeBg}">
+      const clickAttr = currentView === 'jour' ? `onclick="selectDay('${date}')"` : '';
+      const cursor = currentView === 'jour' ? 'cursor:pointer;' : '';
+      return `<div ${clickAttr} style="text-align:center;padding:6px 12px;border-radius:6px;border:1px solid ${borderColor};min-width:72px;${cursor}transition:background 0.15s;${activeBg}">
           <div style="font-size:0.72rem;color:#aaa;margin-bottom:3px;">${label}</div>
           <div style="font-size:0.85rem;color:#e0e0e0;">${min}°–${max}°</div>
         </div>`;
-    }).join('');
+    }).filter(Boolean).join('');
 
     return `<div style="display:flex;gap:8px;overflow-x:auto;padding:10px 24px;background:#0f3460;scrollbar-width:thin;scrollbar-color:#3a3a5a transparent;">${items}</div>`;
   }
@@ -882,9 +881,8 @@
     const summaryEl = document.getElementById('summary-container');
     const empty     = document.getElementById('empty-state');
 
-    // Summary bar — only in jour view, uses ALL sessions (not filtered by cinema/film)
     if (summaryEl) {
-      summaryEl.innerHTML = (currentView === 'jour') ? renderTempSummary(getFilteredSessions()) : '';
+      summaryEl.innerHTML = renderTempSummary(getFilteredSessions());
     }
 
     let html = '';
