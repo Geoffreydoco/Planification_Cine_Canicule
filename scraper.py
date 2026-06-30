@@ -1,7 +1,32 @@
+import re
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 
+import requests
 from allocineAPI.allocineAPI import allocineAPI
+
+_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/125.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+    "Referer": "https://www.allocine.fr/",
+}
+
+
+class _AllocineAPIWithHeaders(allocineAPI):
+    def _get_json_request(self, path, url_params=None):
+        import json
+        req = requests.get(path, params=url_params, headers=_HEADERS)
+        if req.status_code != 200:
+            raise Exception("Error " + str(req.status_code))
+        return json.loads(req.content.decode("utf-8"))
+
 
 CINEMA_IDS = {
     "Pathé Bellecour":   "P0012",
@@ -13,6 +38,7 @@ CINEMA_IDS = {
     "Le Zola":           "P0014",
     "UGC Part-Dieu":     "P0036",
     "Institut Lumière":  "P0050",
+    "Le Comoedia":       "P0003",
 }
 
 # Map allocineAPI diffusionVersion values to display labels
@@ -22,24 +48,6 @@ _VERSION_MAP = {
     "LOCAL": "VF",
 }
 
-
-def _format_runtime(runtime_minutes):
-    """Convert runtime in minutes to a human-readable string like '2h 46min'."""
-    if not runtime_minutes:
-        return ""
-    try:
-        mins = int(runtime_minutes)
-        if mins <= 0:
-            return ""
-        h, m = divmod(mins, 60)
-        if h > 0 and m > 0:
-            return f"{h}h {m:02d}min"
-        elif h > 0:
-            return f"{h}h"
-        else:
-            return f"{m}min"
-    except (ValueError, TypeError):
-        return ""
 
 
 def _api_to_sessions(api_result, cinema_name, date_str):
@@ -56,6 +64,8 @@ def _api_to_sessions(api_result, cinema_name, date_str):
             continue
         film_url = film.get("film_url", "")
         duration = film.get("duration", "")
+        poster_url = film.get("poster_url", "")
+        synopsis = film.get("synopsis", "")
         for showtime in film.get("showtimes", []):
             starts_at = showtime.get("startsAt", "")
             # startsAt is ISO format: "2026-06-30T14:00:00"
@@ -73,12 +83,37 @@ def _api_to_sessions(api_result, cinema_name, date_str):
                 "film": title,
                 "film_url": film_url,
                 "duration": duration,
+                "poster_url": poster_url,
+                "synopsis": synopsis,
                 "date": date_str,
                 "heure": heure,
                 "version": version,
                 "temperature": None,
             })
     return sessions
+
+
+# Global rate limiter: max 1 request every 0.2 s across all threads
+_rate_lock   = threading.Lock()
+_last_req_at = [0.0]
+_MIN_INTERVAL = 0.2
+
+
+def _rate_limited_request(api_instance, url, retries=4):
+    """Throttle + retry with exponential backoff on 429."""
+    for attempt in range(retries):
+        with _rate_lock:
+            gap = _MIN_INTERVAL - (time.time() - _last_req_at[0])
+            if gap > 0:
+                time.sleep(gap)
+            _last_req_at[0] = time.time()
+        try:
+            return api_instance._get_json_request(url)
+        except Exception as e:
+            if "429" in str(e) and attempt < retries - 1:
+                time.sleep(2.0 * (2 ** attempt))
+            else:
+                raise
 
 
 def _get_showtime_enriched(api_instance, cinema_id, date_str):
@@ -92,8 +127,8 @@ def _get_showtime_enriched(api_instance, cinema_id, date_str):
     formatted_data = []
     page, total_pages = 0, 1
     while page < total_pages:
-        json_data = api_instance._get_json_request(
-            URLs.showtime_url(cinema_id, date_str, page + 1)
+        json_data = _rate_limited_request(
+            api_instance, URLs.showtime_url(cinema_id, date_str, page + 1)
         )
         page = int(json_data["pagination"]["page"])
         total_pages = int(json_data["pagination"]["totalPages"])
@@ -110,9 +145,13 @@ def _get_showtime_enriched(api_instance, cinema_id, date_str):
             else:
                 film_url = ""
 
-            # Runtime is in minutes in the AlloCiné API
-            runtime_minutes = movie.get("runtime") or 0
-            duration = _format_runtime(runtime_minutes)
+            # Runtime is already a formatted string in the AlloCiné API (e.g. "1h 29min")
+            duration = movie.get("runtime") or ""
+
+            poster = movie.get("poster") or {}
+            poster_url = poster.get("url") or ""
+            raw_synopsis = movie.get("synopsisFull") or ""
+            synopsis = re.sub(r"<[^>]+>", " ", raw_synopsis).strip()
 
             showtimes = []
             seen_ids = []
@@ -130,6 +169,8 @@ def _get_showtime_enriched(api_instance, cinema_id, date_str):
                 "title": title,
                 "film_url": film_url,
                 "duration": duration,
+                "poster_url": poster_url,
+                "synopsis": synopsis,
                 "showtimes": showtimes,
             })
     return formatted_data
@@ -141,7 +182,7 @@ def scrape_cinema_day(cinema_name, cinema_id, date_str, api=None):
     Returns [] on error (including when the cinema has no showtimes that day).
     """
     if api is None:
-        api = allocineAPI()
+        api = _AllocineAPIWithHeaders()
     try:
         result = _get_showtime_enriched(api, cinema_id, date_str)
         return _api_to_sessions(result, cinema_name, date_str)
@@ -152,6 +193,9 @@ def scrape_cinema_day(cinema_name, cinema_id, date_str, api=None):
 def scrape_all(progress_callback=None):
     """Fetch sessions for all 9 cinemas over 21 days (3 weeks).
 
+    5 cinemas scraped in parallel; each cinema's 21 days run sequentially
+    with a 0.2s delay. Reduces total time from ~3 min to ~35-45 seconds.
+
     progress_callback(current, total, cinema_name) called for each request.
     Returns flat list of session dicts without temperatures.
     """
@@ -159,17 +203,28 @@ def scrape_all(progress_callback=None):
     dates = [(today + timedelta(days=i)).isoformat() for i in range(21)]
 
     total = len(CINEMA_IDS) * len(dates)
-    current = 0
-    sessions = []
-    api = allocineAPI()
+    lock = threading.Lock()
+    counter = [0]
+    all_sessions = []
 
-    for cinema_name, cinema_id in CINEMA_IDS.items():
+    def fetch_cinema(cinema_name, cinema_id):
+        api = _AllocineAPIWithHeaders()
+        cinema_sessions = []
         for date_str in dates:
-            current += 1
-            if progress_callback:
-                progress_callback(current, total, cinema_name)
             day_sessions = scrape_cinema_day(cinema_name, cinema_id, date_str, api=api)
-            sessions.extend(day_sessions)
-            time.sleep(0.5)  # polite rate limiting
+            cinema_sessions.extend(day_sessions)
+            with lock:
+                counter[0] += 1
+                if progress_callback:
+                    progress_callback(counter[0], total, cinema_name)
+        return cinema_sessions
 
-    return sessions
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = {
+            executor.submit(fetch_cinema, name, cid): name
+            for name, cid in CINEMA_IDS.items()
+        }
+        for future in as_completed(futures):
+            all_sessions.extend(future.result())
+
+    return all_sessions
