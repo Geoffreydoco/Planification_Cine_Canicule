@@ -225,6 +225,26 @@
       white-space: nowrap;
     }
 
+    /* ── Calendar button ── */
+    .cal-btn {
+      display: inline-flex;
+      align-items: center;
+      background: transparent;
+      border: 1px solid #3a3a5a;
+      color: #888;
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 0.72rem;
+      cursor: pointer;
+      text-decoration: none;
+      line-height: 1.4;
+      transition: border-color .15s, color .15s;
+    }
+    .cal-btn:hover {
+      border-color: #e94560;
+      color: #e94560;
+    }
+
     /* ── Row color coding ── */
     .row-blue      { background: rgba(52,152,219,.08);  border-left: 3px solid #3498db; }
     .row-green     { background: rgba(46,204,113,.08);  border-left: 3px solid #2ecc71; }
@@ -631,6 +651,56 @@
       <td>${durationCell(rep)}</td>
       <td>${seancesCell(group.sessions)}</td>
     </tr>`;
+  }
+
+  /* ────────────────────────────────────────────
+     Google Agenda helpers
+  ──────────────────────────────────────────── */
+  function calendarUrl(s) {
+    function parseDuration(dur) {
+      if (!dur) return 120;
+      const h = dur.match(/(\d+)\s*h/i);
+      const m = dur.match(/(\d+)\s*min/i) || dur.match(/h\s*(\d+)$/);
+      const hours = h ? parseInt(h[1], 10) : 0;
+      const mins  = m ? parseInt(m[1], 10) : 0;
+      const total = hours * 60 + mins;
+      return total > 0 ? total : 120;
+    }
+
+    function toGCalStamp(dateStr, heureStr) {
+      return dateStr.replace(/-/g, '') + 'T' + heureStr.replace(':', '') + '00';
+    }
+
+    function addMinutes(dateStr, heureStr, minutes) {
+      const [h, m] = heureStr.split(':').map(Number);
+      const totalMin = h * 60 + m + minutes;
+      const newH    = Math.floor(totalMin / 60) % 24;
+      const newM    = totalMin % 60;
+      const dayOver = Math.floor(totalMin / 1440);
+      let endDate   = dateStr;
+      if (dayOver > 0) {
+        const d = new Date(dateStr + 'T12:00:00');
+        d.setDate(d.getDate() + dayOver);
+        endDate = d.toISOString().slice(0, 10);
+      }
+      return endDate.replace(/-/g, '') + 'T' + String(newH).padStart(2,'0') + String(newM).padStart(2,'0') + '00';
+    }
+
+    const durationMin = parseDuration(s.duration);
+    const start  = toGCalStamp(s.date, s.heure);
+    const end    = addMinutes(s.date, s.heure, durationMin);
+    const title  = s.film + (s.version ? ' (' + s.version + ')' : '');
+    const detail = s.film + (s.version ? ' - ' + s.version : '');
+
+    return 'https://calendar.google.com/calendar/render?action=TEMPLATE'
+      + '&text='     + encodeURIComponent(title)
+      + '&dates='    + encodeURIComponent(start + '/' + end)
+      + '&location=' + encodeURIComponent(s.cinema)
+      + '&details='  + encodeURIComponent(detail);
+  }
+
+  function calBtn(s) {
+    return `<a href="${escHtml(calendarUrl(s))}" target="_blank" rel="noopener" class="cal-btn" title="Ajouter à Google Agenda">📅</a>`;
   }
 
   /* ────────────────────────────────────────────
