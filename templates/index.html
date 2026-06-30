@@ -1,8 +1,582 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head><meta charset="UTF-8"><title>Ciné Canicule</title></head>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ciné Canicule 🎬🌡️</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #1a1a2e;
+      --card:      #16213e;
+      --accent:    #e94560;
+      --text:      #e0e0e0;
+      --muted:     #8888aa;
+      --border:    #2a2a4a;
+
+      --blue:      #3498db;
+      --green:     #2ecc71;
+      --orange:    #f39c12;
+      --darkorange:#e67e22;
+      --red:       #e74c3c;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--card);
+      border-bottom: 2px solid var(--accent);
+      padding: 1.2rem 1.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--accent);
+      flex: 0 0 auto;
+    }
+
+    #meta {
+      font-size: 0.82rem;
+      color: var(--muted);
+      flex: 1 1 auto;
+    }
+
+    /* ── Refresh button ── */
+    #btn-refresh {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 0.45rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: opacity .2s;
+    }
+    #btn-refresh:disabled { opacity: .5; cursor: default; }
+
+    .spinner {
+      display: none;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    .spinner.active { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Main layout ── */
+    main {
+      display: flex;
+      gap: 0;
+    }
+
+    /* ── Sidebar ── */
+    aside {
+      width: 220px;
+      flex-shrink: 0;
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      padding: 1.2rem 1rem;
+      min-height: calc(100vh - 70px);
+    }
+
+    aside h2 {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: .7rem;
+    }
+
+    /* View toggle */
+    #view-toggle {
+      display: flex;
+      background: var(--bg);
+      border-radius: 6px;
+      padding: 3px;
+      margin-bottom: 1.4rem;
+      gap: 3px;
+    }
+    .view-btn {
+      flex: 1;
+      padding: .35rem .5rem;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .view-btn.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* Filters */
+    .filter-group { margin-bottom: 1.4rem; }
+
+    .filter-group label {
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+      font-size: 0.82rem;
+      color: var(--text);
+      padding: .2rem 0;
+      cursor: pointer;
+      word-break: break-word;
+    }
+    .filter-group input[type="checkbox"] {
+      accent-color: var(--accent);
+      width: 14px; height: 14px;
+      flex-shrink: 0;
+    }
+
+    #film-search {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text);
+      padding: .4rem .55rem;
+      font-size: 0.82rem;
+    }
+    #film-search::placeholder { color: var(--muted); }
+    #film-search:focus { outline: none; border-color: var(--accent); }
+
+    /* Temp slider */
+    #temp-display {
+      font-size: 0.78rem;
+      color: var(--muted);
+      display: block;
+      margin-top: .3rem;
+    }
+    #temp-slider {
+      width: 100%;
+      accent-color: var(--accent);
+      margin-top: .45rem;
+    }
+
+    /* ── Content area ── */
+    #content {
+      flex: 1;
+      padding: 1.4rem 1.5rem;
+      overflow-x: auto;
+    }
+
+    /* ── Section / group ── */
+    .group { margin-bottom: 2rem; }
+
+    .group-header {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: .6rem;
+      padding-bottom: .35rem;
+      border-bottom: 1px solid var(--border);
+      text-transform: capitalize;
+    }
+
+    /* ── Table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    thead th {
+      background: var(--card);
+      color: var(--muted);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: .5rem .75rem;
+      text-align: left;
+      position: sticky;
+      top: 0;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background .1s;
+    }
+    tbody tr:hover { filter: brightness(1.12); }
+
+    tbody td {
+      padding: .5rem .75rem;
+      vertical-align: middle;
+    }
+
+    /* ── Temperature badge ── */
+    .temp-badge {
+      display: inline-block;
+      padding: .15rem .5rem;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+    }
+
+    /* ── Row color coding ── */
+    .row-blue      { background: rgba(52,152,219,.08);  border-left: 3px solid #3498db; }
+    .row-green     { background: rgba(46,204,113,.08);  border-left: 3px solid #2ecc71; }
+    .row-orange    { background: rgba(243,156,18,.08);  border-left: 3px solid #f39c12; }
+    .row-darkorange{ background: rgba(230,126,34,.08);  border-left: 3px solid #e67e22; }
+    .row-red       { background: rgba(231,76,60,.08);   border-left: 3px solid #e74c3c; }
+    .row-none      { border-left: 3px solid transparent; }
+
+    /* ── Empty state ── */
+    #empty-state {
+      display: none;
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--muted);
+    }
+    #empty-state .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+    #empty-state p { font-size: 1rem; }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      aside { width: 100%; min-height: unset; border-right: none; border-bottom: 1px solid var(--border); }
+      main  { flex-direction: column; }
+    }
+  </style>
+</head>
 <body>
-<h1>Ciné Canicule</h1>
-<script>const DATA = {{ sessions_json | safe }};</script>
+
+<header>
+  <h1>🎬 Ciné Canicule</h1>
+  <div id="meta">Chargement…</div>
+  <button id="btn-refresh" onclick="doRefresh()">
+    <span class="spinner" id="spinner"></span>
+    <span id="btn-label">🔄 Actualiser</span>
+  </button>
+</header>
+
+<main>
+  <aside>
+    <!-- View switch -->
+    <h2>Vue</h2>
+    <div id="view-toggle">
+      <button class="view-btn active" id="btn-jour"   onclick="switchView('jour')">Par jour</button>
+      <button class="view-btn"        id="btn-cinema" onclick="switchView('cinema')">Par cinéma</button>
+    </div>
+
+    <!-- Cinema filter -->
+    <div class="filter-group">
+      <h2>Cinémas</h2>
+      <div id="cinema-checkboxes"></div>
+    </div>
+
+    <!-- Film search -->
+    <div class="filter-group">
+      <h2>Film</h2>
+      <input type="text" id="film-search" placeholder="Rechercher…" oninput="applyFilters()">
+    </div>
+
+    <!-- Temperature threshold -->
+    <div class="filter-group">
+      <h2>Température min.</h2>
+      <input type="range" id="temp-slider" min="0" max="45" value="0" oninput="onSlider()">
+      <span id="temp-display">0 °C et plus</span>
+    </div>
+  </aside>
+
+  <div id="content">
+    <div id="view-container"></div>
+    <div id="empty-state">
+      <div class="empty-icon">🎞️</div>
+      <p>Aucune séance ne correspond aux filtres sélectionnés.</p>
+    </div>
+  </div>
+</main>
+
+<script>
+  const DATA = {{ sessions_json | safe }};
+
+  /* ────────────────────────────────────────────
+     State
+  ──────────────────────────────────────────── */
+  let currentView = 'jour';
+  let selectedCinemas = new Set();
+  let allCinemas = [];
+
+  /* ────────────────────────────────────────────
+     Temperature helpers
+  ──────────────────────────────────────────── */
+  function tempClass(t) {
+    if (t === null || t === undefined) return 'none';
+    if (t < 25)  return 'blue';
+    if (t < 30)  return 'green';
+    if (t < 35)  return 'orange';
+    if (t < 39)  return 'darkorange';
+    return 'red';
+  }
+
+  function tempColor(t) {
+    const map = { blue:'#3498db', green:'#2ecc71', orange:'#f39c12', darkorange:'#e67e22', red:'#e74c3c' };
+    return map[tempClass(t)] || null;
+  }
+
+  function tempBadge(t) {
+    if (t === null || t === undefined) return '<span style="color:#666">—</span>';
+    const color = tempColor(t);
+    return `<span class="temp-badge" style="background:${color}">${t.toFixed(1)} °C</span>`;
+  }
+
+  /* ────────────────────────────────────────────
+     Filtering
+  ──────────────────────────────────────────── */
+  function getFilteredSessions() {
+    const filmQuery = document.getElementById('film-search').value.trim().toLowerCase();
+    const minTemp   = parseInt(document.getElementById('temp-slider').value, 10);
+
+    return DATA.sessions.filter(s => {
+      // Cinema filter
+      if (!selectedCinemas.has(s.cinema)) return false;
+      // Film filter
+      if (filmQuery && !s.film.toLowerCase().includes(filmQuery)) return false;
+      // Temperature filter
+      if (minTemp > 0) {
+        if (s.temperature === null || s.temperature === undefined) return false;
+        if (s.temperature < minTemp) return false;
+      }
+      return true;
+    });
+  }
+
+  /* ────────────────────────────────────────────
+     Row builder helpers
+  ──────────────────────────────────────────── */
+  function rowClass(t) {
+    return 'row-' + tempClass(t);
+  }
+
+  // Vue A row: Cinema | Heure | Film | Temp
+  function buildRowJour(s) {
+    const cls = rowClass(s.temperature);
+    return `<tr class="${cls}">
+      <td>${escHtml(s.cinema)}</td>
+      <td>${escHtml(s.heure)}</td>
+      <td>${escHtml(s.film)} <small style="color:var(--muted)">${escHtml(s.version || '')}</small></td>
+      <td>${tempBadge(s.temperature)}</td>
+    </tr>`;
+  }
+
+  // Vue B row: Date | Heure | Film | Temp
+  function buildRowCinema(s) {
+    const cls = rowClass(s.temperature);
+    const dateStr = new Date(s.date + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'short', day:'numeric', month:'short'});
+    return `<tr class="${cls}">
+      <td>${dateStr}</td>
+      <td>${escHtml(s.heure)}</td>
+      <td>${escHtml(s.film)} <small style="color:var(--muted)">${escHtml(s.version || '')}</small></td>
+      <td>${tempBadge(s.temperature)}</td>
+    </tr>`;
+  }
+
+  function escHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  /* ────────────────────────────────────────────
+     Render Vue A — Par jour
+  ──────────────────────────────────────────── */
+  function renderViewJour(sessions) {
+    // Group by date
+    const groups = {};
+    for (const s of sessions) {
+      if (!groups[s.date]) groups[s.date] = [];
+      groups[s.date].push(s);
+    }
+    const dates = Object.keys(groups).sort();
+
+    if (dates.length === 0) return '';
+
+    return dates.map(date => {
+      const rows = groups[date].slice().sort((a,b) => a.heure.localeCompare(b.heure));
+      const label = new Date(date + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'});
+      const rowsHtml = rows.map(buildRowJour).join('');
+      return `<div class="group">
+        <div class="group-header">${label}</div>
+        <table>
+          <thead><tr>
+            <th>Cinéma</th><th>Heure</th><th>Film</th><th>🌡️</th>
+          </tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>`;
+    }).join('');
+  }
+
+  /* ────────────────────────────────────────────
+     Render Vue B — Par cinéma
+  ──────────────────────────────────────────── */
+  function renderViewCinema(sessions) {
+    const groups = {};
+    for (const s of sessions) {
+      if (!groups[s.cinema]) groups[s.cinema] = [];
+      groups[s.cinema].push(s);
+    }
+    const cinemas = Object.keys(groups).sort();
+
+    if (cinemas.length === 0) return '';
+
+    return cinemas.map(cinema => {
+      const rows = groups[cinema].slice().sort((a,b) => {
+        const d = a.date.localeCompare(b.date);
+        return d !== 0 ? d : a.heure.localeCompare(b.heure);
+      });
+      const rowsHtml = rows.map(buildRowCinema).join('');
+      return `<div class="group">
+        <div class="group-header">${escHtml(cinema)}</div>
+        <table>
+          <thead><tr>
+            <th>Date</th><th>Heure</th><th>Film</th><th>🌡️</th>
+          </tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>`;
+    }).join('');
+  }
+
+  /* ────────────────────────────────────────────
+     Apply filters + re-render
+  ──────────────────────────────────────────── */
+  function applyFilters() {
+    const sessions = getFilteredSessions();
+    const container = document.getElementById('view-container');
+    const empty     = document.getElementById('empty-state');
+
+    let html = '';
+    if (currentView === 'jour') {
+      html = renderViewJour(sessions);
+    } else {
+      html = renderViewCinema(sessions);
+    }
+
+    if (!html) {
+      container.innerHTML = '';
+      empty.style.display = 'block';
+    } else {
+      container.innerHTML = html;
+      empty.style.display = 'none';
+    }
+  }
+
+  /* ────────────────────────────────────────────
+     View switch
+  ──────────────────────────────────────────── */
+  function switchView(view) {
+    currentView = view;
+    document.getElementById('btn-jour').classList.toggle('active',   view === 'jour');
+    document.getElementById('btn-cinema').classList.toggle('active', view === 'cinema');
+    applyFilters();
+  }
+
+  /* ────────────────────────────────────────────
+     Slider
+  ──────────────────────────────────────────── */
+  function onSlider() {
+    const val = document.getElementById('temp-slider').value;
+    const label = val === '0' ? '0 °C et plus' : `≥ ${val} °C`;
+    document.getElementById('temp-display').textContent = label;
+    applyFilters();
+  }
+
+  /* ────────────────────────────────────────────
+     Refresh
+  ──────────────────────────────────────────── */
+  async function doRefresh() {
+    const btn     = document.getElementById('btn-refresh');
+    const spinner = document.getElementById('spinner');
+    const label   = document.getElementById('btn-label');
+
+    btn.disabled = true;
+    spinner.classList.add('active');
+    label.textContent = 'Actualisation…';
+
+    try {
+      const resp = await fetch('/refresh', { method: 'POST' });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      window.location.reload();
+    } catch (err) {
+      alert('Erreur lors de l\'actualisation : ' + err.message);
+      btn.disabled = false;
+      spinner.classList.remove('active');
+      label.textContent = '🔄 Actualiser';
+    }
+  }
+
+  /* ────────────────────────────────────────────
+     Init
+  ──────────────────────────────────────────── */
+  function init() {
+    // Meta info
+    const metaEl = document.getElementById('meta');
+    if (DATA.updated_at) {
+      const dt = new Date(DATA.updated_at).toLocaleString('fr-FR');
+      const n  = DATA.sessions.length;
+      metaEl.textContent = `Mis à jour : ${dt} — ${n} séance${n !== 1 ? 's' : ''}`;
+    } else {
+      metaEl.textContent = 'Aucune donnée — cliquez sur Actualiser';
+    }
+
+    // Build cinema checkboxes
+    allCinemas = [...new Set(DATA.sessions.map(s => s.cinema))].sort();
+    selectedCinemas = new Set(allCinemas);
+
+    const container = document.getElementById('cinema-checkboxes');
+    if (allCinemas.length === 0) {
+      container.innerHTML = '<span style="color:var(--muted);font-size:.8rem">Aucun cinéma</span>';
+    } else {
+      container.innerHTML = allCinemas.map(c => {
+        const id = 'chk-' + c.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+        return `<label>
+          <input type="checkbox" id="${id}" value="${escHtml(c)}" checked
+            onchange="toggleCinema('${escHtml(c)}', this.checked)">
+          ${escHtml(c)}
+        </label>`;
+      }).join('');
+    }
+
+    // Initial render
+    applyFilters();
+  }
+
+  function toggleCinema(cinema, checked) {
+    if (checked) {
+      selectedCinemas.add(cinema);
+    } else {
+      selectedCinemas.delete(cinema);
+    }
+    applyFilters();
+  }
+
+  init();
+</script>
 </body>
 </html>
