@@ -29,28 +29,30 @@ HEADERS = {
 def scrape_cinema_day(cinema_name, cinema_id, date_str):
     """Scrape les séances d'un cinéma pour une date donnée.
 
-    Essaie d'abord l'URL avec date (d_date=YYYY-MM-DD).  Si AlloCiné renvoie
-    une 404 (l'URL paramétrée par date n'est parfois pas disponible), bascule
-    sur l'URL sans date qui liste les séances du jour courant.
+    LIMITATION AlloCiné : les URLs paramétrées par date (d_date=YYYY-MM-DD)
+    renvoient systématiquement 404, et le paramètre ?shwt_date= est ignoré par
+    le serveur. La navigation par date du site est entièrement côté client (JS).
+    En conséquence, l'URL sans date renvoie toujours les séances du jour courant,
+    quelle que soit la valeur de date_str passée en argument.
+
+    Cette fonction accepte toujours date_str pour maintenir une interface
+    cohérente, mais elle scrape uniquement les séances du jour courant.
+    Appeler cette fonction avec une date future ne produira pas les séances de
+    cette date future.
 
     Retourne une liste de dicts avec les clés :
         cinema, film, date, heure, version, temperature (None)
     Retourne [] en cas d'erreur HTTP ou d'absence de données.
     """
-    url_with_date = (
-        f"https://www.allocine.fr/seance/"
-        f"salle_gen_csalle={cinema_id}-d_date={date_str}.html"
-    )
-    url_no_date = (
+    # AlloCiné date-parameterized URLs always return 404; the undated URL is
+    # the only working endpoint but always serves today's sessions.
+    url = (
         f"https://www.allocine.fr/seance/"
         f"salle_gen_csalle={cinema_id}.html"
     )
 
     try:
-        r = requests.get(url_with_date, headers=HEADERS, timeout=10)
-        if r.status_code == 404:
-            # Date-parameterized URL not available — fall back to undated page
-            r = requests.get(url_no_date, headers=HEADERS, timeout=10)
+        r = requests.get(url, headers=HEADERS, timeout=10)
         r.raise_for_status()
     except Exception:
         return []
@@ -98,3 +100,22 @@ def scrape_cinema_day(cinema_name, cinema_id, date_str):
                 })
 
     return sessions
+
+
+def scrape_all():
+    """Scrape les séances du jour pour tous les cinémas.
+
+    LIMITATION : AlloCiné ne fournit que les séances du jour courant via
+    scraping HTML statique. La navigation multi-dates est JavaScript uniquement.
+    Cette fonction scrape donc uniquement aujourd'hui pour chaque cinéma.
+
+    Retourne une liste de dicts de séances avec les clés :
+        cinema, film, date, heure, version, temperature (None)
+    """
+    today = datetime.now().strftime("%Y-%m-%d")
+    all_sessions = []
+    for cinema_name, cinema_id in CINEMA_IDS.items():
+        sessions = scrape_cinema_day(cinema_name, cinema_id, today)
+        all_sessions.extend(sessions)
+        time.sleep(1)  # politesse envers le serveur
+    return all_sessions

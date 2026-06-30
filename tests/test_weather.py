@@ -38,3 +38,8 @@ def test_get_temperature_rounds_down_minutes():
 def test_get_temperature_returns_none_when_missing():
     temps = {"2026-06-30T14:00": 36.5}
     assert weather.get_temperature(temps, "2026-07-20", "14h00") is None
+
+def test_get_temperature_colon_format():
+    temps = {"2026-06-30T14:00": 36.5}
+    # AlloCiné new format "14:30" -> rounds down to hour 14
+    assert weather.get_temperature(temps, "2026-06-30", "14:30") == 36.5

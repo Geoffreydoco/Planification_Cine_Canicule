@@ -1,7 +1,7 @@
-"""Tests pour scraper.scrape_cinema_day."""
+"""Tests pour scraper.scrape_cinema_day et scraper.scrape_all."""
 from unittest.mock import patch, MagicMock
 import pytest
-from scraper import scrape_cinema_day
+from scraper import scrape_cinema_day, scrape_all
 
 # ---------------------------------------------------------------------------
 # Minimal HTML that mirrors the real AlloCiné structure discovered by
@@ -187,11 +187,20 @@ class TestScrapecinemadayValues:
 
 
 class TestScrapecinemadayErrors:
-    """Tests de gestion des erreurs."""
+    """Tests de gestion des erreurs.
+
+    Note : scrape_cinema_day utilise uniquement l'URL sans date (URL undatée),
+    conformément à la limitation AlloCiné — les URLs datées renvoient 404 et le
+    paramètre ?shwt_date= est ignoré côté serveur (navigation JS uniquement).
+    """
 
     def test_returns_empty_list_on_http_500(self):
-        # A 500 on both the date URL and the fallback URL → []
         with patch("scraper.requests.get", return_value=_make_response(500)):
+            result = scrape_cinema_day("Pathé Bellecour", "P0012", "2026-06-30")
+        assert result == []
+
+    def test_returns_empty_list_on_http_404(self):
+        with patch("scraper.requests.get", return_value=_make_response(404)):
             result = scrape_cinema_day("Pathé Bellecour", "P0012", "2026-06-30")
         assert result == []
 
@@ -206,19 +215,50 @@ class TestScrapecinemadayErrors:
             result = scrape_cinema_day("Pathé Bellecour", "P0012", "2026-06-30")
         assert result == []
 
-    def test_fallback_to_no_date_url_when_404(self):
-        """When the date URL returns 404, the function tries the undated URL."""
-        resp_404 = _make_response(404, text="")
-        resp_200 = _make_response(200, text=SAMPLE_HTML)
-        with patch("scraper.requests.get", side_effect=[resp_404, resp_200]):
-            result = scrape_cinema_day("Pathé Bellecour", "P0012", "2026-06-30")
-        # Should still parse sessions from the fallback response
-        assert len(result) == 4
+    def test_only_one_http_request_per_call(self):
+        """scrape_cinema_day must make exactly one HTTP request (undated URL only)."""
+        with patch("scraper.requests.get", return_value=_make_response()) as mock_get:
+            scrape_cinema_day("Pathé Bellecour", "P0012", "2026-06-30")
+        assert mock_get.call_count == 1
+        called_url = mock_get.call_args[0][0]
+        assert "P0012" in called_url
+        # Must NOT contain d_date or shwt_date
+        assert "d_date" not in called_url
+        assert "shwt_date" not in called_url
 
-    def test_both_urls_404_returns_empty(self):
-        """If both the date URL and the fallback URL fail, return []."""
-        resp_404_date = _make_response(404, text="")
-        resp_500_fallback = _make_response(500, text="")
-        with patch("scraper.requests.get", side_effect=[resp_404_date, resp_500_fallback]):
-            result = scrape_cinema_day("Pathé Bellecour", "P0012", "2026-06-30")
-        assert result == []
+
+class TestScrapeAll:
+    """Tests pour scrape_all — scrape le jour courant pour tous les cinémas."""
+
+    def test_returns_list(self):
+        with patch("scraper.requests.get", return_value=_make_response()):
+            with patch("scraper.time.sleep"):
+                result = scrape_all()
+        assert isinstance(result, list)
+
+    def test_calls_each_cinema_once(self):
+        """scrape_all doit faire exactement un appel HTTP par cinéma."""
+        from scraper import CINEMA_IDS
+        with patch("scraper.requests.get", return_value=_make_response()) as mock_get:
+            with patch("scraper.time.sleep"):
+                scrape_all()
+        assert mock_get.call_count == len(CINEMA_IDS)
+
+    def test_aggregates_sessions_from_all_cinemas(self):
+        """scrape_all doit agréger les séances de tous les cinémas."""
+        from scraper import CINEMA_IDS
+        with patch("scraper.requests.get", return_value=_make_response()):
+            with patch("scraper.time.sleep"):
+                result = scrape_all()
+        # SAMPLE_HTML has 4 sessions; with 9 cinemas that is 9*4 = 36
+        assert len(result) == len(CINEMA_IDS) * 4
+
+    def test_all_sessions_have_today_date(self):
+        """Toutes les séances doivent avoir la date du jour courant."""
+        from datetime import datetime
+        today = datetime.now().strftime("%Y-%m-%d")
+        with patch("scraper.requests.get", return_value=_make_response()):
+            with patch("scraper.time.sleep"):
+                result = scrape_all()
+        for session in result:
+            assert session["date"] == today

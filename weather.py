@@ -23,8 +23,11 @@ def fetch_temperatures():
 
 
 def get_temperature(temps_dict, date_str, heure_str):
-    """Retourne la température pour une date et une heure AlloCiné ('14h30').
-    Arrondit à l'heure inférieure. Retourne None si hors période de prévision."""
-    hour = heure_str.split("h")[0].zfill(2)
+    """Retourne la température pour une date et une heure AlloCiné.
+    Gère les formats '14h30' et '14:30'. Arrondit à l'heure inférieure.
+    Retourne None si hors période de prévision."""
+    import re
+    match = re.match(r'(\d{1,2})[h:]', heure_str)
+    hour = match.group(1).zfill(2) if match else "00"
     key = f"{date_str}T{hour}:00"
     return temps_dict.get(key)
