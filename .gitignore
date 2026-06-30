@@ -1,0 +1,5 @@
+data/sessions.json
+__pycache__/
+*.pyc
+.superpowers/
+tests/sample_allocine.html
