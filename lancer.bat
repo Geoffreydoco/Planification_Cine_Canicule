@@ -12,6 +12,11 @@ if errorlevel 1 (
 
 echo Installation des dependances...
 pip install -r requirements.txt --quiet
+if errorlevel 1 (
+    echo ERREUR : Installation des dependances a echoue.
+    pause
+    exit /b 1
+)
 
 echo Demarrage du serveur sur http://localhost:5000 ...
 python app.py
