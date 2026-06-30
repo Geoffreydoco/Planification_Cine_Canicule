@@ -575,7 +575,7 @@
       : `<span style="color:#555;font-size:0.82rem;">—</span>`;
   }
 
-  // Vue A row: Cinema | Heure | Durée | Film | Temp
+  // Vue A row: Cinema | Heure | Durée | Film | Temp | 📅
   function buildRowJour(s) {
     const cls = rowClass(s.temperature);
     return `<tr class="${cls}">
@@ -584,10 +584,11 @@
       <td>${durationCell(s)}</td>
       <td>${filmCell(s)}</td>
       <td>${tempBadge(s.temperature)}</td>
+      <td>${calBtn(s)}</td>
     </tr>`;
   }
 
-  // Vue B row: Date | Heure | Durée | Film | Temp
+  // Vue B row: Date | Heure | Durée | Film | Temp | 📅
   function buildRowCinema(s) {
     const cls = rowClass(s.temperature);
     const dateStr = new Date(s.date + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'short', day:'numeric', month:'short'});
@@ -597,6 +598,7 @@
       <td>${durationCell(s)}</td>
       <td>${filmCell(s)}</td>
       <td>${tempBadge(s.temperature)}</td>
+      <td>${calBtn(s)}</td>
     </tr>`;
   }
 
@@ -806,7 +808,7 @@
     } else {
       const sorted = rawDay.slice().sort((a, b) => a.cinema.localeCompare(b.cinema) || a.heure.localeCompare(b.heure));
       rowsHtml  = sorted.map(buildRowJour).join('');
-      theadHtml = '<tr><th>Cinéma</th><th>Heure</th><th>Durée</th><th>Film</th><th>🌡️</th></tr>';
+      theadHtml = '<tr><th>Cinéma</th><th>Heure</th><th>Durée</th><th>Film</th><th>🌡️</th><th></th></tr>';
     }
 
     const d = new Date(selectedDay + 'T12:00:00');
@@ -856,7 +858,7 @@
           return d !== 0 ? d : a.heure.localeCompare(b.heure);
         });
         rowsHtml  = sorted.map(buildRowCinema).join('');
-        theadHtml = '<tr><th>Date</th><th>Heure</th><th>Durée</th><th>Film</th><th>🌡️</th></tr>';
+        theadHtml = '<tr><th>Date</th><th>Heure</th><th>Durée</th><th>Film</th><th>🌡️</th><th></th></tr>';
       }
       return `<div class="group">
         <div class="group-header">${escHtml(cinema)}</div>
