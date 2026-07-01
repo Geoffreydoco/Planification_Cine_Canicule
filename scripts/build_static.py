@@ -14,7 +14,7 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from scraper import scrape_all
-from weather import fetch_temperatures, get_temperature, fetch_daily_minmax
+from weather import fetch_weather, get_temperature
 
 OUT_DIR = "_site"
 
@@ -24,8 +24,7 @@ def main():
     sessions = scrape_all()
 
     print("Fetching temperatures...")
-    temps = fetch_temperatures()
-    daily_temps = fetch_daily_minmax()
+    temps, daily_temps = fetch_weather()
     for s in sessions:
         s["temperature"] = get_temperature(temps, s["date"], s["heure"])
 

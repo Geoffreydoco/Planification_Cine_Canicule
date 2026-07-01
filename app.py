@@ -7,7 +7,7 @@ from datetime import datetime
 from flask import Flask, render_template, jsonify
 
 from scraper import scrape_all
-from weather import fetch_temperatures, get_temperature, fetch_daily_minmax
+from weather import fetch_weather, get_temperature
 
 app = Flask(__name__)
 DATA_FILE = os.path.join("data", "sessions.json")
@@ -34,8 +34,7 @@ def save_sessions(data):
 
 def run_scrape(progress_callback=None):
     sessions = scrape_all(progress_callback=progress_callback)
-    temps = fetch_temperatures()
-    daily_temps = fetch_daily_minmax()
+    temps, daily_temps = fetch_weather()
     for s in sessions:
         s["temperature"] = get_temperature(temps, s["date"], s["heure"])
     data = {
