@@ -143,17 +143,103 @@
       flex-shrink: 0;
     }
 
-    #film-search {
+    /* ── DSFR menu déroulant (thème sombre) — cinémas + films ── */
+    #film-nav, #cinema-nav { position: relative; }
+    #film-nav .fr-nav__list, #cinema-nav .fr-nav__list { list-style: none; margin: 0; padding: 0; }
+    #film-nav .fr-nav__item, #cinema-nav .fr-nav__item { position: relative; }
+
+    #film-nav .fr-nav__btn, #cinema-nav .fr-nav__btn {
       width: 100%;
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 5px;
+      border-radius: 4px;
       color: var(--text);
-      padding: .4rem .55rem;
-      font-size: 0.82rem;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.85rem;
+      font-family: inherit;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
     }
-    #film-search::placeholder { color: var(--muted); }
-    #film-search:focus { outline: none; border-color: var(--accent); }
+    #film-nav .fr-nav__btn::after, #cinema-nav .fr-nav__btn::after {
+      content: '';
+      flex-shrink: 0;
+      width: 1rem; height: 1rem;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z' fill='%23e0e0e0'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: center;
+      transition: transform 0.2s ease;
+    }
+    #film-nav .fr-nav__btn[aria-expanded="true"]::after,
+    #cinema-nav .fr-nav__btn[aria-expanded="true"]::after { transform: rotate(180deg); }
+    #film-nav .fr-nav__btn:hover, #cinema-nav .fr-nav__btn:hover { border-color: var(--accent); }
+
+    #film-nav .fr-collapse, #cinema-nav .fr-collapse {
+      display: none;
+      position: absolute;
+      z-index: 200;
+      left: 0; right: 0;
+      top: calc(100% + 2px);
+      background: #1a1a2e;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      box-shadow: 0 6px 20px rgba(0,0,0,.5);
+    }
+    #film-nav .fr-collapse--expanded, #cinema-nav .fr-collapse--expanded { display: block; }
+
+    #film-filter-search, #cinema-filter-search {
+      width: 100%;
+      box-sizing: border-box;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      padding: 0.35rem 0.5rem;
+      font-size: 0.8rem;
+      font-family: inherit;
+    }
+    #film-filter-search::placeholder, #cinema-filter-search::placeholder { color: var(--muted); }
+    #film-filter-search:focus, #cinema-filter-search:focus { outline: none; border-color: var(--accent); }
+
+    #film-nav .fr-menu__list, #cinema-nav .fr-menu__list {
+      list-style: none;
+      margin: 0; padding: 0;
+      max-height: 240px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #3a3a5a transparent;
+    }
+
+    #film-nav .fr-nav__link, #cinema-nav .fr-nav__link {
+      display: block;
+      width: 100%;
+      background: none;
+      border: none;
+      border-left: 4px solid transparent;
+      color: var(--text);
+      padding: 0.5rem 0.75rem;
+      font-size: 0.82rem;
+      font-family: inherit;
+      text-align: left;
+      cursor: pointer;
+      box-sizing: border-box;
+    }
+    #film-nav .fr-nav__link:hover, #cinema-nav .fr-nav__link:hover {
+      background: rgba(255,255,255,.05);
+      border-left-color: var(--accent);
+    }
+    #film-nav .fr-nav__link--active, #cinema-nav .fr-nav__link--active {
+      color: var(--accent);
+      border-left-color: var(--accent);
+      font-weight: 600;
+    }
+    #film-nav li:first-child .fr-nav__link, #cinema-nav li:first-child .fr-nav__link {
+      border-bottom: 1px solid var(--border);
+      font-style: italic;
+    }
 
     /* ── Summary bar ── */
     #summary-container {
@@ -314,11 +400,257 @@
       -webkit-box-orient: vertical;
     }
 
+    /* ── Vue C — Par film (cartes) ── */
+    .film-card-day-header {
+      padding: 10px 24px 4px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      text-transform: capitalize;
+    }
+    #film-cards-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+      gap: 16px;
+      padding: 12px 24px 24px;
+    }
+    .film-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .film-card-poster {
+      height: 180px;
+      overflow: hidden;
+      background: #1a1a2e;
+      flex-shrink: 0;
+    }
+    .film-card-poster img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+      display: block;
+    }
+    .film-card-body {
+      padding: 12px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .film-card-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin: 0;
+      color: var(--text);
+    }
+    .film-card-title a { color: inherit; text-decoration: none; }
+    .film-card-title a:hover { color: var(--accent); }
+    .film-card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      align-items: center;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .film-card-rating {
+      background: rgba(255,255,255,.07);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 0.75rem;
+    }
+    .film-card-genres {
+      font-size: 0.75rem;
+      color: #7a9fd4;
+    }
+    .cert-badge {
+      display: inline-block;
+      padding: 1px 7px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+    .film-card-crew {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+    .film-card-synopsis {
+      font-size: 0.75rem;
+      color: var(--muted);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin: 0;
+      flex: 1;
+    }
+    .film-card-sessions {
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+      margin-top: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .film-card-cinema-name {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+    .film-card-session-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 8px;
+    }
+
     /* ── Responsive ── */
     @media (max-width: 640px) {
       aside { width: 100%; min-height: unset; border-right: none; border-bottom: 1px solid var(--border); }
       main  { flex-direction: column; }
+      #film-cards-container { grid-template-columns: 1fr; padding: 8px 12px 16px; }
     }
+
+    /* ── Footer ── */
+    footer {
+      margin: 32px 16px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    footer details summary {
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: var(--muted);
+      user-select: none;
+    }
+    footer details summary:hover { color: var(--text); }
+    footer details[open] summary { border-bottom: 1px solid var(--border); }
+    footer details p {
+      margin: 0;
+      padding: 8px 16px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    footer details p + p { border-top: 1px solid var(--border); }
+    footer a { color: #7a9fd4; }
+    footer a:hover { color: #e94560; }
+
+    /* ── Header logos & actions ── */
+    .header-left { display:flex; flex-direction:row; align-items:center; gap:14px; flex:0 0 auto; }
+    .header-logos { display:flex; gap:8px; align-items:center; }
+    .header-logo {
+      height: 36px; width: 36px;
+      border-radius: 8px;
+      object-fit: contain;
+      background: rgba(255,255,255,.92);
+      padding: 3px;
+      transition: transform .15s, box-shadow .15s;
+    }
+    .header-logos a { display:block; }
+    .header-logos a:hover .header-logo { transform:scale(1.12); box-shadow:0 2px 8px rgba(0,0,0,.5); }
+    .header-actions { display:flex; align-items:center; gap:.75rem; flex-shrink:0; }
+
+    /* ── Theme switch ── */
+    .theme-switch {
+      display: flex; align-items: center; gap: 7px;
+      cursor: pointer; flex-shrink: 0; user-select:none;
+    }
+    .theme-switch input[type="checkbox"] { display: none; }
+    .theme-track {
+      position: relative; width: 44px; height: 24px;
+      background: #3a3a5a; border-radius: 12px; transition: background .25s;
+      flex-shrink:0;
+    }
+    .theme-knob {
+      position: absolute; top: 3px; left: 3px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: #fff; transition: transform .25s;
+      font-size: 11px; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .theme-switch input:checked + .theme-track { background: #f0b429; }
+    .theme-switch input:checked + .theme-track .theme-knob { transform: translateX(20px); }
+    .theme-label { font-size: 0.78rem; color: var(--muted); min-width: 40px; }
+
+    /* ── Light mode ── */
+    body.light {
+      --bg:    #f0f4f8;
+      --card:  #ffffff;
+      --text:  #16213e;
+      --muted: #4a5568;   /* ≥6.6:1 sur blanc — WCAG AA ✓ */
+      --border:#c0ccd8;
+    }
+    body.light #film-tooltip { background:#f8fafd; border-color:#b8c4d8; }
+    body.light #film-tooltip .tt-title { color:#16213e; }
+    body.light #film-tooltip .tt-synopsis { color:#4a5568; }
+    body.light .film-card-poster { background:#d0dcea; }
+    body.light .film-card-rating { background:rgba(0,0,0,.07); color:#16213e; }
+    body.light .film-card-genres { color:#1a55a0; }  /* 7:1 sur blanc ✓ */
+    body.light #film-nav .fr-collapse,
+    body.light #cinema-nav .fr-collapse { background:#fff; border-color:#c0ccd8; }
+    body.light #progress-area { background:#dde6f2; }
+    body.light .cinema-map-label { background:#1a4070; }
+    /* Boutons — contraste min 4.5:1 */
+    body.light .cal-btn { border-color:#b0bccf; color:#4a5568; }
+    body.light .cal-btn:hover { border-color:var(--accent); color:var(--accent); }
+    body.light .toggle-btn { border-color:#b0bccf; color:#4a5568; }
+    body.light .toggle-btn:hover { border-color:var(--accent); color:var(--accent); }
+    body.light .view-btn { border-color:#b0bccf; color:#4a5568; background:transparent; }
+    body.light .view-btn.active { background:#c42040; color:#fff; border-color:#c42040; } /* blanc sur #c42040 = 5.9:1 ✓ */
+    /* Boutons jour (inline styles hardcodés en JS) */
+    body.light #day-nav button { color:#4a5568 !important; border-color:#7a8fb0 !important; background:rgba(0,0,0,0.05) !important; }
+    body.light #day-nav button[data-active="1"] { background:#c42040 !important; color:#fff !important; border-color:#c42040 !important; }
+    /* Barre résumé températures (inline styles) */
+    body.light #summary-container > div { background:#dde6f4 !important; }
+    body.light #summary-container div[style] > div { color:#16213e !important; }
+    /* Lignes tableau */
+    body.light .row-blue       { background:rgba(52,152,219,.16); }
+    body.light .row-green      { background:rgba(46,204,113,.16); }
+    body.light .row-orange     { background:rgba(243,156,18,.16); }
+    body.light .row-darkorange { background:rgba(230,126,34,.16); }
+    body.light .row-red        { background:rgba(231,76,60,.16); }
+    body.light .cinema-hover { border-bottom-color:#7a8898; }
+    body.light footer a { color:#1a55a0; }  /* 7:1 sur blanc ✓ */
+    body.light .theme-label { color:#4a5568; }
+
+    /* ── Cinema map tooltip ── */
+    .cinema-hover { cursor: pointer; border-bottom: 1px dotted #666; }
+    .cinema-hover:hover { border-bottom-color: var(--accent); color: var(--accent); }
+    #cinema-map-tooltip {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      width: 240px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #3a3a5a;
+      box-shadow: 0 4px 20px rgba(0,0,0,.75);
+    }
+    .cinema-map-label {
+      background: #0f3460;
+      color: #e0e0e0;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 5px 9px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border-bottom: 1px solid #3a3a5a;
+    }
+    #cinema-map-container { width: 240px; height: 155px; }
+    #cinema-map-container .leaflet-attribution-flag { display: none !important; }
+    #cinema-map-container .leaflet-control-attribution { font-size: 8px !important; }
   </style>
 </head>
 <body>
@@ -329,12 +661,40 @@
   <div class="tt-synopsis" id="tt-synopsis"></div>
 </div>
 
+<div id="cinema-map-tooltip">
+  <div class="cinema-map-label"></div>
+  <div id="cinema-map-container"></div>
+</div>
+
 <header>
-  <h1>🎬 Planificateur Ciné Canicule pour ceux qui vivent sous les toits</h1>
+  <div class="header-left">
+    <h1>🎬 Planificateur Ciné Canicule pour ceux qui vivent sous les toits</h1>
+    <div class="header-logos">
+      <a href="https://www.allocine.fr" target="_blank" rel="noopener" title="Données cinéma : AlloCiné">
+        <img src="https://www.allocine.fr/apple-touch-icon.png" alt="AlloCiné" class="header-logo"
+             onerror="this.src='https://www.allocine.fr/favicon.ico';this.onerror=function(){this.parentElement.style.display='none'}">
+      </a>
+      <a href="https://www.lyon.fr" target="_blank" rel="noopener" title="Ville de Lyon">
+        <img src="https://upload.wikimedia.org/wikipedia/fr/a/a9/Logo_Ville_de_Lyon.svg" alt="Lyon" class="header-logo"
+             onerror="this.parentElement.style.display='none'">
+      </a>
+      <a href="https://www.villeurbanne.fr" target="_blank" rel="noopener" title="Ville de Villeurbanne">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/b/be/Logo_de_Villeurbanne.svg" alt="Villeurbanne" class="header-logo"
+             onerror="this.parentElement.style.display='none'">
+      </a>
+    </div>
+  </div>
   <div id="meta">Chargement…</div>
-  <button id="btn-refresh" onclick="doRefresh()">
-    <span id="btn-label">🔄 Actualiser</span>
-  </button>
+  <div class="header-actions">
+    <label class="theme-switch" title="Basculer sombre / clair">
+      <input type="checkbox" id="theme-toggle" onchange="toggleTheme()">
+      <div class="theme-track"><div class="theme-knob" id="theme-knob">🌙</div></div>
+      <span class="theme-label" id="theme-label">Sombre</span>
+    </label>
+    <button id="btn-refresh" onclick="doRefresh()">
+      <span id="btn-label">🔄 Actualiser</span>
+    </button>
+  </div>
 </header>
 <div id="progress-area" style="display:none;width:100%;padding:8px 24px;background:#0f3460;">
   <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
@@ -353,22 +713,47 @@
     <div id="view-toggle">
       <button class="view-btn active" id="btn-jour"   onclick="switchView('jour')">Par jour</button>
       <button class="view-btn"        id="btn-cinema" onclick="switchView('cinema')">Par cinéma</button>
+      <button class="view-btn"        id="btn-film"   onclick="switchView('film')">Par film</button>
     </div>
 
     <!-- Cinema filter -->
     <div class="filter-group">
       <h2>Cinémas</h2>
-      <div style="display:flex;gap:8px;margin-bottom:6px;">
-        <button class="toggle-btn" onclick="setCinemasAll(true)">Tout cocher</button>
-        <button class="toggle-btn" onclick="setCinemasAll(false)">Tout décocher</button>
-      </div>
-      <div id="cinema-checks"></div>
+      <nav class="fr-nav" id="cinema-nav" role="navigation" aria-label="Filtre par cinéma">
+        <ul class="fr-nav__list">
+          <li class="fr-nav__item">
+            <button class="fr-nav__btn" aria-expanded="false" aria-controls="cinema-menu-panel" id="cinema-nav-btn" onclick="toggleCinemaDropdown()">
+              <span id="cinema-dropdown-label">Tous les cinémas</span>
+            </button>
+            <div class="fr-collapse fr-menu" id="cinema-menu-panel">
+              <div style="padding:6px 6px 4px;">
+                <input type="text" id="cinema-filter-search" placeholder="Rechercher un cinéma…" oninput="filterCinemaList(this.value)">
+              </div>
+              <ul class="fr-menu__list" id="cinema-options"></ul>
+            </div>
+          </li>
+        </ul>
+      </nav>
     </div>
 
-    <!-- Film search -->
+    <!-- Film filter -->
     <div class="filter-group">
-      <h2>Film</h2>
-      <input type="text" id="film-search" placeholder="Rechercher…" oninput="applyFilters()">
+      <h2>Film à l'affiche</h2>
+      <nav class="fr-nav" id="film-nav" role="navigation" aria-label="Filtre par film">
+        <ul class="fr-nav__list">
+          <li class="fr-nav__item">
+            <button class="fr-nav__btn" aria-expanded="false" aria-controls="film-menu-panel" id="film-nav-btn" onclick="toggleFilmDropdown()">
+              <span id="film-dropdown-label">Tous les films</span>
+            </button>
+            <div class="fr-collapse fr-menu" id="film-menu-panel">
+              <div style="padding:6px 6px 4px;">
+                <input type="text" id="film-filter-search" placeholder="Rechercher un film…" oninput="filterFilmList(this.value)">
+              </div>
+              <ul class="fr-menu__list" id="film-options"></ul>
+            </div>
+          </li>
+        </ul>
+      </nav>
     </div>
 
     <!-- Group by film toggle + advanced info -->
@@ -386,7 +771,17 @@
                style="accent-color:var(--accent);width:14px;height:14px;flex-shrink:0;">
         Infos avancées
       </label>
+      <label style="display:flex;align-items:center;gap:.45rem;font-size:0.82rem;color:var(--text);cursor:pointer;margin-top:.35rem;">
+        <input type="checkbox" id="only-all-ages"
+               onchange="onlyAllAges=this.checked;applyFilters()"
+               style="accent-color:var(--accent);width:14px;height:14px;flex-shrink:0;">
+        Films tout public uniquement
+      </label>
     </div>
+
+    <button class="toggle-btn" onclick="resetFilters()" style="width:100%;margin-top:8px;background:#2a1a2e;border-color:#e94560;color:#e94560;">
+      Réinitialiser les choix
+    </button>
 
   </aside>
 
@@ -401,7 +796,7 @@
 </main>
 
 <script>
-  const DATA = {{ sessions_json | safe }};
+  let DATA = null;
 
   /* ────────────────────────────────────────────
      State
@@ -409,9 +804,12 @@
   let currentView = 'jour';
   let selectedCinemas = new Set();
   let allCinemas = [];
+  let selectedFilms = new Set();
+  let allFilms = [];
   let selectedDay = null;  // null = auto-select first available day
   let groupByFilm = true;
   let showAdvancedInfo = false;
+  let onlyAllAges = false;
 
   /* ────────────────────────────────────────────
      Temperature helpers
@@ -453,15 +851,26 @@
      Filtering
   ──────────────────────────────────────────── */
   function getFilteredSessions() {
-    const filmQuery = document.getElementById('film-search').value.trim().toLowerCase();
-
+    if (!DATA) return [];
     return DATA.sessions.filter(s => {
-      // Cinema filter
       if (!selectedCinemas.has(s.cinema)) return false;
-      // Film filter
-      if (filmQuery && !s.film.toLowerCase().includes(filmQuery)) return false;
+      if (selectedFilms.size < allFilms.length && !selectedFilms.has(s.film)) return false;
+      if (onlyAllAges && s.certificate !== 'Tout public' && s.certificate !== 'Tous publics') return false;
       return true;
     });
+  }
+
+  function certBadge(cert) {
+    if (!cert) return '';
+    const colors = {
+      'Tout public':  '#27ae60',
+      'Tous publics': '#27ae60',
+    };
+    const match = cert.match(/(\d+)/);
+    const age = match ? parseInt(match[1]) : null;
+    const color = colors[cert] ?? (age >= 18 ? '#e74c3c' : age >= 16 ? '#e67e22' : age >= 12 ? '#f39c12' : '#888');
+    const label = colors[cert] ? 'Tout public' : (age ? `-${age}` : cert);
+    return `<span class="cert-badge" style="background:${color}" title="${escHtml(cert)}">${label}</span>`;
   }
 
   /* ────────────────────────────────────────────
@@ -576,6 +985,102 @@
 
   function ttHide() { tooltip.style.display = 'none'; }
 
+  // ── Cinema mini-map (Leaflet + Nominatim) ──────────────────────────
+  let _mapLeafletReady = false, _mapLeafletLoading = false, _mapLeafletCbs = [];
+  let _leafletMap = null, _leafletMarker = null, _mapHideTimer = null, _mapCurrentCinema = null;
+  const _cinemaCoords = new Map();
+
+  function _ensureLeaflet(cb) {
+    if (_mapLeafletReady) { cb(); return; }
+    _mapLeafletCbs.push(cb);
+    if (_mapLeafletLoading) return;
+    _mapLeafletLoading = true;
+    const css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(css);
+    const js = document.createElement('script');
+    js.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    js.onload = () => { _mapLeafletReady = true; _mapLeafletCbs.forEach(f => f()); _mapLeafletCbs = []; };
+    document.head.appendChild(js);
+  }
+
+  async function _geocodeCinema(name) {
+    if (_cinemaCoords.has(name)) return _cinemaCoords.get(name);
+    try {
+      const q = encodeURIComponent(name + ', Lyon, France');
+      const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1&accept-language=fr`);
+      const data = await r.json();
+      const result = data[0] ? { lat: +data[0].lat, lng: +data[0].lon } : null;
+      _cinemaCoords.set(name, result);
+      return result;
+    } catch { _cinemaCoords.set(name, null); return null; }
+  }
+
+  function _positionMapTooltip(e) {
+    const el = document.getElementById('cinema-map-tooltip');
+    const gap = 14, pad = 8, tw = 240, th = 185;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let x = e.clientX + gap;
+    if (x + tw > vw - pad) x = e.clientX - tw - gap;
+    let y = e.clientY + gap;
+    if (y + th > vh - pad) y = e.clientY - th - gap;
+    el.style.left = Math.max(pad, x) + 'px';
+    el.style.top  = Math.max(pad, y) + 'px';
+  }
+
+  async function showCinemaMap(e, cinemaName) {
+    clearTimeout(_mapHideTimer);
+    _mapCurrentCinema = cinemaName;
+    const coords = await _geocodeCinema(cinemaName);
+    if (!coords || _mapCurrentCinema !== cinemaName) return;
+    const el = document.getElementById('cinema-map-tooltip');
+    const label = el.querySelector('.cinema-map-label');
+    label.textContent = cinemaName;
+    const osmUrl = `https://www.openstreetmap.org/search?query=${encodeURIComponent(cinemaName + ', Lyon')}`;
+    el.dataset.osmUrl = osmUrl;
+    _positionMapTooltip(e);
+    el.style.display = 'block';
+    _ensureLeaflet(() => {
+      if (!_leafletMap) {
+        _leafletMap = L.map('cinema-map-container', { zoomControl: false });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank">OSM</a>',
+          maxZoom: 19
+        }).addTo(_leafletMap);
+        _leafletMarker = L.marker([coords.lat, coords.lng]).addTo(_leafletMap);
+        _leafletMap.setView([coords.lat, coords.lng], 15);
+      } else {
+        _leafletMarker.setLatLng([coords.lat, coords.lng]);
+        _leafletMap.setView([coords.lat, coords.lng], 15);
+      }
+      setTimeout(() => _leafletMap.invalidateSize(), 60);
+    });
+  }
+
+  function hideCinemaMap() {
+    _mapCurrentCinema = null;
+    _mapHideTimer = setTimeout(() => { document.getElementById('cinema-map-tooltip').style.display = 'none'; }, 300);
+  }
+
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest('[data-cinema]');
+    if (el) showCinemaMap(e, el.dataset.cinema);
+  });
+  document.addEventListener('mouseout', e => {
+    const el = e.target.closest('[data-cinema]');
+    if (el) hideCinemaMap();
+  });
+  const _mapTooltipEl = document.getElementById('cinema-map-tooltip');
+  _mapTooltipEl.style.cursor = 'pointer';
+  _mapTooltipEl.title = 'Cliquer pour ouvrir dans OpenStreetMap';
+  _mapTooltipEl.addEventListener('mouseenter', () => clearTimeout(_mapHideTimer));
+  _mapTooltipEl.addEventListener('mouseleave', hideCinemaMap);
+  _mapTooltipEl.addEventListener('click', () => {
+    const url = _mapTooltipEl.dataset.osmUrl;
+    if (url) window.open(url, '_blank', 'noopener');
+  });
+
   function durationCell(s) {
     return s.duration
       ? `<span style="color:#888;font-size:0.82rem;">${escHtml(s.duration)}</span>`
@@ -599,14 +1104,14 @@
 
   function advancedHeaders() {
     if (!showAdvancedInfo) return '';
-    return '<th>Réalisateur</th><th>Public</th><th>Presse</th><th>Genres</th><th>Acteurs</th>';
+    return '<th>Réalisateurice</th><th>Public</th><th>Presse</th><th>Genres</th><th>Acteurices</th>';
   }
 
   // Vue A row: Cinema | Heure | Durée | Film | [avancé] | Temp | 📅
   function buildRowJour(s) {
     const cls = rowClass(s.temperature);
     return `<tr class="${cls}">
-      <td>${escHtml(s.cinema)}</td>
+      <td><span class="cinema-hover" data-cinema="${escHtml(s.cinema)}">${escHtml(s.cinema)}</span></td>
       <td>${escHtml(s.heure)}</td>
       <td>${durationCell(s)}</td>
       <td>${filmCell(s)}</td>
@@ -667,7 +1172,7 @@
     const cls = rowClass(t);
     const rep = group.sessions[0];
     return `<tr class="${cls}">
-      <td>${escHtml(group.cinema)}</td>
+      <td><span class="cinema-hover" data-cinema="${escHtml(group.cinema)}">${escHtml(group.cinema)}</span></td>
       <td>${filmCell(rep)}</td>
       <td>${durationCell(rep)}</td>
       ${advancedCells(rep)}
@@ -736,7 +1241,7 @@
   }
 
   function calBtn(s) {
-    return `<a href="${escHtml(calendarUrl(s))}" target="_blank" rel="noopener" class="cal-btn" title="Ajouter à Google Agenda">📅</a>`;
+    return `<a href="${escHtml(calendarUrl(s))}" target="_blank" rel="noopener" class="cal-btn" title="Ajouter cette séance à votre Google Agenda (date, heure, lieu)">📅</a>`;
   }
 
   /* ────────────────────────────────────────────
@@ -756,11 +1261,11 @@
       const max = Math.round(dt.max);
       const d = new Date(date + 'T12:00:00');
       const label = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
-      const borderColor = tempColor(max) || '#555';
-      const isActive = currentView === 'jour' && date === selectedDay;
+      const borderColor = tempColor(max) || '#8888aa';
+      const isActive = (currentView === 'jour' || currentView === 'film') && date === selectedDay;
       const activeBg = isActive ? 'background:rgba(233,69,96,0.15);' : '';
-      const clickAttr = currentView === 'jour' ? `onclick="selectDay('${date}')"` : '';
-      const cursor = currentView === 'jour' ? 'cursor:pointer;' : '';
+      const clickAttr = (currentView === 'jour' || currentView === 'film') ? `onclick="selectDay('${date}')"` : '';
+      const cursor = (currentView === 'jour' || currentView === 'film') ? 'cursor:pointer;' : '';
       return `<div ${clickAttr} style="text-align:center;padding:6px 12px;border-radius:6px;border:1px solid ${borderColor};min-width:72px;${cursor}transition:background 0.15s;${activeBg}">
           <div style="font-size:0.72rem;color:#aaa;margin-bottom:3px;">${label}</div>
           <div style="font-size:0.85rem;color:#e0e0e0;">${min}°–${max}°</div>
@@ -818,7 +1323,7 @@
           cursor:pointer;font-size:0.82rem;transition:all 0.2s;
           ${isActive
             ? 'background:#e94560;color:#fff;border-color:#e94560;'
-            : 'background:transparent;color:#aaa;border-color:#3a3a5a;'}
+            : 'background:rgba(255,255,255,0.05);color:#ccc;border-color:#6060a0;'}
         ">${dayLabel}</button>`;
     }).join('');
 
@@ -837,7 +1342,7 @@
         a.cinema.localeCompare(b.cinema) || a.film.localeCompare(b.film) || (a.version || '').localeCompare(b.version || '')
       );
       rowsHtml  = groupList.map(buildGroupedRowJour).join('');
-      theadHtml = `<tr><th>Cinéma</th><th>Film</th><th>Durée</th>${advancedHeaders()}<th>Séances</th></tr>`;
+      theadHtml = `<tr><th>Cinéma</th><th>Film</th><th>Durée</th>${advancedHeaders()}<th>Séances + Température extérieure</th></tr>`;
     } else {
       const sorted = rawDay.slice().sort((a, b) => a.cinema.localeCompare(b.cinema) || a.heure.localeCompare(b.heure));
       rowsHtml  = sorted.map(buildRowJour).join('');
@@ -884,7 +1389,7 @@
           a.date.localeCompare(b.date) || a.film.localeCompare(b.film) || (a.version || '').localeCompare(b.version || '')
         );
         rowsHtml  = groupList.map(buildGroupedRowCinema).join('');
-        theadHtml = `<tr><th>Date</th><th>Film</th><th>Durée</th>${advancedHeaders()}<th>Séances</th></tr>`;
+        theadHtml = `<tr><th>Date</th><th>Film</th><th>Durée</th>${advancedHeaders()}<th>Séances + Température extérieure</th></tr>`;
       } else {
         const sorted = groups[cinema].slice().sort((a, b) => {
           const d = a.date.localeCompare(b.date);
@@ -894,7 +1399,7 @@
         theadHtml = `<tr><th>Date</th><th>Heure</th><th>Durée</th><th>Film</th>${advancedHeaders()}<th>🌡️</th><th></th></tr>`;
       }
       return `<div class="group">
-        <div class="group-header">${escHtml(cinema)}</div>
+        <div class="group-header cinema-hover" data-cinema="${escHtml(cinema)}">${escHtml(cinema)}</div>
         <table>
           <thead>${theadHtml}</thead>
           <tbody>${rowsHtml}</tbody>
@@ -904,9 +1409,106 @@
   }
 
   /* ────────────────────────────────────────────
+     Render Vue C — Par film (cartes)
+  ──────────────────────────────────────────── */
+  function renderViewFilm(sessions) {
+    const datesWithTemp = getDatesWithTemperatures(DATA.sessions);
+
+    const groups = {};
+    for (const s of sessions) {
+      if (!datesWithTemp.has(s.date)) continue;
+      if (!groups[s.date]) groups[s.date] = [];
+      groups[s.date].push(s);
+    }
+    const dates = Object.keys(groups).sort();
+
+    if (dates.length === 0) return '<div style="padding:4rem 2rem;text-align:center;color:var(--muted)">Aucune séance avec données météo disponibles.</div>';
+
+    if (!selectedDay || !dates.includes(selectedDay)) selectedDay = dates[0];
+
+    const navHtml = dates.map(date => {
+      const d = new Date(date + 'T12:00:00');
+      const dayLabel = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+      const isActive = date === selectedDay;
+      return `<button data-active="${isActive ? '1' : '0'}" onclick="selectDay('${date}')" style="
+          white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid;
+          cursor:pointer;font-size:0.82rem;transition:all 0.2s;
+          ${isActive
+            ? 'background:#e94560;color:#fff;border-color:#e94560;'
+            : 'background:rgba(255,255,255,0.05);color:#ccc;border-color:#6060a0;'}
+        ">${dayLabel}</button>`;
+    }).join('');
+
+    const dObj = new Date(selectedDay + 'T12:00:00');
+    const fullLabel = dObj.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    const dayHeader = fullLabel.charAt(0).toUpperCase() + fullLabel.slice(1);
+
+    // Group by film for the selected day
+    const filmMap = new Map();
+    for (const s of (groups[selectedDay] || [])) {
+      if (!filmMap.has(s.film)) filmMap.set(s.film, { rep: s, cinemaMap: {} });
+      const entry = filmMap.get(s.film);
+      const key = `${s.cinema}|||${s.version || ''}`;
+      if (!entry.cinemaMap[key]) entry.cinemaMap[key] = { cinema: s.cinema, version: s.version, sessions: [] };
+      entry.cinemaMap[key].sessions.push(s);
+    }
+
+    // Sort ascending by total session count
+    const filmList = [...filmMap.values()]
+      .map(f => ({ ...f, total: Object.values(f.cinemaMap).reduce((n, c) => n + c.sessions.length, 0) }))
+      .sort((a, b) => b.total - a.total || a.rep.film.localeCompare(b.rep.film, 'fr'));
+
+    const cardsHtml = filmList.map(({ rep, cinemaMap }) => {
+      const posterHtml = rep.poster_url
+        ? `<img src="${escHtml(rep.poster_url)}" alt="${escHtml(rep.film)}" loading="lazy">`
+        : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:3rem;">🎬</div>`;
+
+      const userR  = rep.user_rating  != null ? `<span class="film-card-rating">👥 ${Number(rep.user_rating).toFixed(1)}</span>`  : '';
+      const pressR = rep.press_rating != null ? `<span class="film-card-rating">📰 ${Number(rep.press_rating).toFixed(1)}</span>` : '';
+      const dur    = rep.duration ? `<span>${escHtml(rep.duration)}</span>` : '';
+      const genres = (rep.genres  || []).join(', ');
+      const dirHtml   = rep.director            ? `<div class="film-card-crew">🎬 ${escHtml(rep.director)}</div>` : '';
+      const actHtml   = rep.actors && rep.actors.length ? `<div class="film-card-crew">🎭 ${escHtml(rep.actors.join(', '))}</div>` : '';
+      const synHtml   = rep.synopsis ? `<p class="film-card-synopsis">${escHtml(rep.synopsis)}</p>` : '';
+
+      const titleHtml = rep.film_url
+        ? `<a href="${escHtml(rep.film_url)}" target="_blank" rel="noopener">${escHtml(rep.film)}</a>`
+        : escHtml(rep.film);
+
+      const sessionsHtml = Object.values(cinemaMap)
+        .sort((a, b) => a.cinema.localeCompare(b.cinema, 'fr'))
+        .map(({ cinema, version, sessions }) => {
+          const vLabel = version ? ` <span style="font-size:0.68rem;opacity:.7">(${escHtml(version)})</span>` : '';
+          const sorted = sessions.slice().sort((a, b) => a.heure.localeCompare(b.heure));
+          return `<div>
+            <div class="film-card-cinema-name cinema-hover" data-cinema="${escHtml(cinema)}">${escHtml(cinema)}${vLabel}</div>
+            <div class="film-card-session-badges">${sorted.map(sessionBadge).join('')}</div>
+          </div>`;
+        }).join('');
+
+      return `<div class="film-card">
+        <div class="film-card-poster">${posterHtml}</div>
+        <div class="film-card-body">
+          <h3 class="film-card-title">${titleHtml}</h3>
+          <div class="film-card-meta">${dur}${userR}${pressR}${certBadge(rep.certificate)}</div>
+          ${genres ? `<div class="film-card-genres">${escHtml(genres)}</div>` : ''}
+          ${dirHtml}${actHtml}
+          ${synHtml}
+          <div class="film-card-sessions">${sessionsHtml}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div id="day-nav">${navHtml}</div>
+      <div class="film-card-day-header">${dayHeader}</div>
+      <div id="film-cards-container">${cardsHtml || '<div style="padding:2rem;text-align:center;color:var(--muted)">Aucun film ce jour.</div>'}</div>`;
+  }
+
+  /* ────────────────────────────────────────────
      Apply filters + re-render
   ──────────────────────────────────────────── */
   function applyFilters() {
+    if (!DATA) return;
     const sessions = getFilteredSessions();
     const container = document.getElementById('view-container');
     const summaryEl = document.getElementById('summary-container');
@@ -919,6 +1521,8 @@
     let html = '';
     if (currentView === 'jour') {
       html = renderViewJour(sessions);
+    } else if (currentView === 'film') {
+      html = renderViewFilm(sessions);
     } else {
       html = renderViewCinema(sessions);
     }
@@ -939,6 +1543,7 @@
     currentView = view;
     document.getElementById('btn-jour').classList.toggle('active',   view === 'jour');
     document.getElementById('btn-cinema').classList.toggle('active', view === 'cinema');
+    document.getElementById('btn-film').classList.toggle('active',   view === 'film');
     applyFilters();
   }
 
@@ -952,7 +1557,7 @@
     const progressText = document.getElementById('progress-text');
 
     btn.disabled = true;
-    btn.textContent = 'Actualisation...';
+    document.getElementById('btn-label').textContent = 'Actualisation...';
     progressArea.style.display = 'block';
     progressBar.style.width = '0%';
     progressText.textContent = 'Démarrage...';
@@ -972,7 +1577,7 @@
     } catch (e) {
       alert('Erreur : ' + e.message);
       btn.disabled = false;
-      btn.textContent = '🔄 Actualiser';
+      document.getElementById('btn-label').textContent = '🔄 Actualiser';
       progressArea.style.display = 'none';
     }
   }
@@ -988,6 +1593,7 @@
         const state = await resp.json();
         const pct = state.total > 0 ? Math.round(state.current / state.total * 100) : 0;
         progressBar.style.width = pct + '%';
+        document.getElementById('progress-pct').textContent = pct + '%';
         progressText.textContent = state.cinema
           ? `${state.current}/${state.total} — ${state.cinema}`
           : 'En cours...';
@@ -997,7 +1603,7 @@
           if (state.error) {
             alert('Erreur lors du scraping : ' + state.error);
             btn.disabled = false;
-            btn.textContent = '🔄 Actualiser';
+            document.getElementById('btn-label').textContent = '🔄 Actualiser';
             document.getElementById('progress-area').style.display = 'none';
           } else {
             window.location.reload();
@@ -1007,19 +1613,20 @@
         clearInterval(interval);
         alert('Erreur réseau : ' + e.message);
         btn.disabled = false;
-        btn.textContent = '🔄 Actualiser';
+        document.getElementById('btn-label').textContent = '🔄 Actualiser';
         document.getElementById('progress-area').style.display = 'none';
       }
     }, 2000);
   }
 
   function setCinemasAll(checked) {
-    document.querySelectorAll('#cinema-checks input[type="checkbox"]').forEach(cb => cb.checked = checked);
     if (checked) {
-      allCinemas.forEach(c => selectedCinemas.add(c));
+      selectedCinemas = new Set(allCinemas);
     } else {
       selectedCinemas.clear();
     }
+    renderCinemaOptions(allCinemas);
+    updateCinemaDropdownLabel();
     applyFilters();
   }
 
@@ -1037,38 +1644,229 @@
       metaEl.textContent = 'Aucune donnée — cliquez sur Actualiser';
     }
 
-    // Build cinema checkboxes
+    // Build cinema dropdown
     allCinemas = [...new Set(DATA.sessions.map(s => s.cinema))].sort();
     selectedCinemas = new Set(allCinemas);
+    renderCinemaOptions(allCinemas);
 
-    const container = document.getElementById('cinema-checks');
-    if (allCinemas.length === 0) {
-      container.innerHTML = '<span style="color:var(--muted);font-size:.8rem">Aucun cinéma</span>';
-    } else {
-      container.innerHTML = allCinemas.map(c => {
-        const id = 'chk-' + c.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
-        return `<label>
-          <input type="checkbox" id="${id}" value="${escHtml(c)}" checked
-            onchange="toggleCinema('${escHtml(c)}', this.checked)">
-          ${escHtml(c)}
-        </label>`;
-      }).join('');
-    }
+    // Build film dropdown
+    allFilms = [...new Set(DATA.sessions.map(s => s.film))].sort((a, b) => a.localeCompare(b, 'fr'));
+    selectedFilms = new Set(allFilms);
+    renderFilmOptions(allFilms);
 
     // Initial render
     applyFilters();
   }
 
-  function toggleCinema(cinema, checked) {
-    if (checked) {
-      selectedCinemas.add(cinema);
+  function renderCinemaOptions(cinemas) {
+    const container = document.getElementById('cinema-options');
+    const allSelected = selectedCinemas.size === allCinemas.length;
+    const allCls = 'fr-nav__link' + (allSelected ? ' fr-nav__link--active' : '');
+    let html = `<li><button class="${allCls}" data-action="all-cinemas">Tous les cinémas</button></li>`;
+    html += cinemas.map(c => {
+      const isActive = !allSelected && selectedCinemas.has(c);
+      const cls = 'fr-nav__link' + (isActive ? ' fr-nav__link--active' : '');
+      return `<li><button class="${cls}" data-cinema-item="${escHtml(c)}">${escHtml(c)}</button></li>`;
+    }).join('');
+    container.innerHTML = html;
+  }
+
+  function updateCinemaDropdownLabel() {
+    const label = document.getElementById('cinema-dropdown-label');
+    if (selectedCinemas.size === allCinemas.length) {
+      label.textContent = 'Tous les cinémas';
+    } else if (selectedCinemas.size === 1) {
+      label.textContent = [...selectedCinemas][0];
     } else {
-      selectedCinemas.delete(cinema);
+      label.textContent = `${selectedCinemas.size} cinémas sélectionnés`;
     }
+  }
+
+  function filterCinemaList(query) {
+    const q = query.trim().toLowerCase();
+    const filtered = q ? allCinemas.filter(c => c.toLowerCase().includes(q)) : allCinemas;
+    renderCinemaOptions(filtered);
+  }
+
+  function toggleCinemaItem(cinema) {
+    if (selectedCinemas.size === allCinemas.length) {
+      selectedCinemas = new Set([cinema]);
+    } else if (selectedCinemas.has(cinema)) {
+      selectedCinemas.delete(cinema);
+      if (selectedCinemas.size === 0) selectedCinemas = new Set(allCinemas);
+    } else {
+      selectedCinemas.add(cinema);
+    }
+    renderCinemaOptions(allCinemas);
+    updateCinemaDropdownLabel();
     applyFilters();
   }
 
-  init();
+  function selectAllCinemas() {
+    selectedCinemas = new Set(allCinemas);
+    renderCinemaOptions(allCinemas);
+    updateCinemaDropdownLabel();
+    applyFilters();
+  }
+
+  function toggleCinemaDropdown() {
+    const btn = document.getElementById('cinema-nav-btn');
+    const panel = document.getElementById('cinema-menu-panel');
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', String(!expanded));
+    panel.classList.toggle('fr-collapse--expanded', !expanded);
+  }
+
+  document.getElementById('cinema-options').addEventListener('click', e => {
+    const opt = e.target.closest('button[data-cinema-item], button[data-action]');
+    if (!opt) return;
+    e.stopPropagation();
+    if (opt.dataset.action === 'all-cinemas') selectAllCinemas();
+    else toggleCinemaItem(opt.dataset.cinemaItem);
+  });
+
+  function renderFilmOptions(films) {
+    const container = document.getElementById('film-options');
+    const allSelected = selectedFilms.size === allFilms.length;
+    const allCls = 'fr-nav__link' + (allSelected ? ' fr-nav__link--active' : '');
+    let html = `<li><button class="${allCls}" data-action="all">Tous les films</button></li>`;
+    html += films.map(f => {
+      const isActive = !allSelected && selectedFilms.has(f);
+      const cls = 'fr-nav__link' + (isActive ? ' fr-nav__link--active' : '');
+      return `<li><button class="${cls}" data-film="${escHtml(f)}">${escHtml(f)}</button></li>`;
+    }).join('');
+    container.innerHTML = html;
+  }
+
+  function updateFilmDropdownLabel() {
+    const label = document.getElementById('film-dropdown-label');
+    if (selectedFilms.size === allFilms.length) {
+      label.textContent = 'Tous les films';
+    } else if (selectedFilms.size === 1) {
+      label.textContent = [...selectedFilms][0];
+    } else {
+      label.textContent = `${selectedFilms.size} films sélectionnés`;
+    }
+  }
+
+  function filterFilmList(query) {
+    const q = query.trim().toLowerCase();
+    const filtered = q ? allFilms.filter(f => f.toLowerCase().includes(q)) : allFilms;
+    renderFilmOptions(filtered);
+  }
+
+  function toggleFilm(film) {
+    if (selectedFilms.size === allFilms.length) {
+      // Depuis "tous" : sélectionner uniquement ce film
+      selectedFilms = new Set([film]);
+    } else if (selectedFilms.has(film)) {
+      selectedFilms.delete(film);
+      if (selectedFilms.size === 0) selectedFilms = new Set(allFilms);
+    } else {
+      selectedFilms.add(film);
+    }
+    renderFilmOptions(allFilms);
+    updateFilmDropdownLabel();
+    applyFilters();
+  }
+
+  function selectAllFilms() {
+    selectedFilms = new Set(allFilms);
+    renderFilmOptions(allFilms);
+    updateFilmDropdownLabel();
+    applyFilters();
+  }
+
+  function resetFilters() {
+    selectAllCinemas();
+    selectAllFilms();
+    groupByFilm = true;
+    document.getElementById('group-by-film').checked = true;
+    showAdvancedInfo = false;
+    document.getElementById('show-advanced').checked = false;
+    onlyAllAges = false;
+    document.getElementById('only-all-ages').checked = false;
+    applyFilters();
+  }
+
+  function toggleFilmDropdown() {
+    const btn = document.getElementById('film-nav-btn');
+    const panel = document.getElementById('film-menu-panel');
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', String(!expanded));
+    panel.classList.toggle('fr-collapse--expanded', !expanded);
+  }
+
+  document.getElementById('film-options').addEventListener('click', e => {
+    const opt = e.target.closest('button[data-film], button[data-action]');
+    if (!opt) return;
+    e.stopPropagation();
+    if (opt.dataset.action === 'all') {
+      selectAllFilms();
+    } else {
+      toggleFilm(opt.dataset.film);
+    }
+  });
+
+  document.addEventListener('click', e => {
+    const filmNav = document.getElementById('film-nav');
+    if (filmNav && !filmNav.contains(e.target)) {
+      document.getElementById('film-nav-btn').setAttribute('aria-expanded', 'false');
+      document.getElementById('film-menu-panel').classList.remove('fr-collapse--expanded');
+    }
+    const cinemaNav = document.getElementById('cinema-nav');
+    if (cinemaNav && !cinemaNav.contains(e.target)) {
+      document.getElementById('cinema-nav-btn').setAttribute('aria-expanded', 'false');
+      document.getElementById('cinema-menu-panel').classList.remove('fr-collapse--expanded');
+    }
+  });
+
+  function toggleTheme() {
+    const isLight = document.body.classList.toggle('light');
+    document.getElementById('theme-toggle').checked = isLight;
+    document.getElementById('theme-knob').textContent = isLight ? '☀️' : '🌙';
+    document.getElementById('theme-label').textContent = isLight ? 'Clair' : 'Sombre';
+    localStorage.setItem('theme', isLight ? 'light' : 'dark');
+  }
+
+  // Restore saved theme before first render
+  if (localStorage.getItem('theme') === 'light') {
+    document.body.classList.add('light');
+    document.getElementById('theme-toggle').checked = true;
+    document.getElementById('theme-knob').textContent = '☀️';
+    document.getElementById('theme-label').textContent = 'Clair';
+  }
+
+  fetch('/sessions.json')
+    .then(r => r.json())
+    .then(data => {
+      DATA = data;
+      init();
+    })
+    .catch(() => {
+      const el = document.getElementById('meta') || document.getElementById('summary-container');
+      if (el) el.textContent = 'Erreur de chargement des données.';
+    });
 </script>
+
+<footer>
+  <details>
+    <summary>À propos de ce site</summary>
+    <p>
+      Les séances sont récupérées automatiquement depuis
+      <a href="https://www.allocine.fr" target="_blank" rel="noopener">AlloCiné</a>
+      deux fois par jour (8h et 16h, heure de Paris).
+    </p>
+    <p>
+      Les températures proviennent de
+      <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>
+      (prévisions horaires pour Paris, données en accès libre).
+    </p>
+    <p>
+      Les notes spectateurs et presse, les synopsis, les affiches et les informations
+      sur les films sont issues d'AlloCiné.
+    </p>
+  </details>
+</footer>
 </body>
 </html>

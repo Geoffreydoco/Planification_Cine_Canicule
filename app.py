@@ -7,21 +7,21 @@ from datetime import datetime
 from flask import Flask, render_template, jsonify
 
 from scraper import scrape_all
-from weather import fetch_temperatures, get_temperature, fetch_daily_minmax
+from weather import fetch_weather, get_temperature
 
 app = Flask(__name__)
 DATA_FILE = os.path.join("data", "sessions.json")
 
 _scrape_lock = threading.Lock()
 _scrape_state = {
-    "running": False, "current": 0, "total": 189,
+    "running": False, "current": 0, "total": 0,
     "cinema": "", "done": False, "count": 0, "error": None
 }
 
 
 def load_sessions():
     if not os.path.exists(DATA_FILE):
-        return {"updated_at": None, "sessions": []}
+        return {"updated_at": None, "sessions": [], "daily_temps": {}}
     with open(DATA_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -34,8 +34,7 @@ def save_sessions(data):
 
 def run_scrape(progress_callback=None):
     sessions = scrape_all(progress_callback=progress_callback)
-    temps = fetch_temperatures()
-    daily_temps = fetch_daily_minmax()
+    temps, daily_temps = fetch_weather()
     for s in sessions:
         s["temperature"] = get_temperature(temps, s["date"], s["heure"])
     data = {
@@ -49,11 +48,7 @@ def run_scrape(progress_callback=None):
 
 @app.route("/")
 def index():
-    data = load_sessions()
-    return render_template(
-        "index.html",
-        sessions_json=json.dumps(data, ensure_ascii=False),
-    )
+    return render_template("index.html")
 
 
 def _run_scrape_background():
@@ -75,7 +70,7 @@ def refresh():
         if _scrape_state["running"]:
             return jsonify({"status": "already_running"}), 409
         _scrape_state.update({
-            "running": True, "current": 0, "total": 189,
+            "running": True, "current": 0, "total": 0,
             "cinema": "", "done": False, "count": 0, "error": None
         })
     threading.Thread(target=_run_scrape_background, daemon=True).start()
@@ -86,6 +81,11 @@ def refresh():
 def progress():
     with _scrape_lock:
         return jsonify(dict(_scrape_state))
+
+
+@app.route("/sessions.json")
+def sessions_data():
+    return jsonify(load_sessions())
 
 
 if __name__ == "__main__":
