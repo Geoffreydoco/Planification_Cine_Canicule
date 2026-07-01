@@ -7,7 +7,13 @@ Architecture post-allocineAPI:
 """
 from unittest.mock import patch, Mock, MagicMock
 import scraper
-from scraper import _api_to_sessions, scrape_cinema_day, scrape_all, CINEMA_IDS
+from scraper import _api_to_sessions, scrape_cinema_day, scrape_all
+
+# Dictionnaire fixe pour les tests — on patche _fetch_cinema_ids pour retourner ceci
+TEST_CINEMA_IDS = {
+    "Cinéma Test A": "C001",
+    "Cinéma Test B": "C002",
+}
 
 # ---------------------------------------------------------------------------
 # Sample API response matching our enriched structure:
@@ -60,10 +66,14 @@ class TestApiToSessions:
 
     def test_all_required_keys_present(self):
         result = _api_to_sessions(SAMPLE_API_RESPONSE, "Pathé Bellecour", "2026-06-30")
-        required = {"cinema", "film", "film_url", "duration", "poster_url", "synopsis",
-                    "date", "heure", "version", "temperature"}
+        required = {
+            "cinema", "film", "film_url", "duration", "poster_url", "synopsis",
+            "date", "heure", "version", "temperature",
+            "director", "user_rating", "press_rating", "genres", "actors", "certificate",
+        }
         for session in result:
-            assert required == set(session.keys()), f"Missing keys in {session}"
+            missing = required - set(session.keys())
+            assert not missing, f"Clés manquantes : {missing}"
 
     def test_film_url_present(self):
         result = _api_to_sessions(SAMPLE_API_RESPONSE, "Pathé Bellecour", "2026-06-30")
@@ -225,7 +235,7 @@ class TestScrapeCinemaDay:
         assert sessions == []
 
     def test_creates_own_api_when_none_passed(self):
-        with patch("scraper.allocineAPI") as MockAPI, \
+        with patch("scraper._AllocineAPIWithHeaders") as MockAPI, \
              patch("scraper._get_showtime_enriched", return_value=[]):
             scrape_cinema_day("Pathé Bellecour", "P0012", "2026-06-30")
         MockAPI.assert_called_once()
@@ -244,60 +254,64 @@ class TestScrapeCinemaDay:
 # ---------------------------------------------------------------------------
 
 class TestScrapeAll:
-    """Tests for scrape_all — 9 cinemas × 21 days."""
+    """Tests for scrape_all — dynamic cinema list × 21 dates."""
 
     def test_returns_list(self):
-        with patch("scraper.allocineAPI") as MockAPI, \
+        with patch("scraper._fetch_cinema_ids", return_value=TEST_CINEMA_IDS), \
+             patch("scraper._AllocineAPIWithHeaders"), \
              patch("scraper.time.sleep"), \
              patch("scraper._get_showtime_enriched", return_value=[]):
             result = scrape_all()
         assert isinstance(result, list)
 
-    def test_calls_enriched_189_times(self):
-        """scrape_all must call _get_showtime_enriched exactly 9 × 21 = 189 times."""
-        with patch("scraper.allocineAPI") as MockAPI, \
+    def test_calls_enriched_N_times(self):
+        """scrape_all doit appeler _get_showtime_enriched une fois par cinéma × par date."""
+        with patch("scraper._fetch_cinema_ids", return_value=TEST_CINEMA_IDS), \
+             patch("scraper._AllocineAPIWithHeaders"), \
              patch("scraper.time.sleep"), \
              patch("scraper._get_showtime_enriched", return_value=[]) as mock_enrich:
             scrape_all()
-        assert mock_enrich.call_count == len(CINEMA_IDS) * 21
+        assert mock_enrich.call_count == len(TEST_CINEMA_IDS) * 21
 
     def test_creates_one_api_instance_per_cinema(self):
-        """scrape_all must create one allocineAPI instance per cinema (parallel workers)."""
-        with patch("scraper.allocineAPI") as MockAPI, \
+        """scrape_all doit créer une instance _AllocineAPIWithHeaders par cinéma (workers parallèles)."""
+        with patch("scraper._fetch_cinema_ids", return_value=TEST_CINEMA_IDS), \
+             patch("scraper._AllocineAPIWithHeaders") as MockAPI, \
              patch("scraper.time.sleep"), \
              patch("scraper._get_showtime_enriched", return_value=[]):
             scrape_all()
-        assert MockAPI.call_count == len(CINEMA_IDS)
+        assert MockAPI.call_count == len(TEST_CINEMA_IDS)
 
     def test_aggregates_all_sessions(self):
-        """Sessions from all cinema/date calls are concatenated."""
+        """Les sessions de tous les appels cinéma/date sont concaténées."""
         one_session = {
             "title": "Film Test",
             "film_url": "https://www.allocine.fr/film/fichefilm_gen_cfilm=99999.html",
             "duration": "1h 30min",
             "showtimes": [{"startsAt": "2026-06-30T14:00:00", "diffusionVersion": "DUBBED"}],
         }
-        with patch("scraper.allocineAPI") as MockAPI, \
+        with patch("scraper._fetch_cinema_ids", return_value=TEST_CINEMA_IDS), \
+             patch("scraper._AllocineAPIWithHeaders"), \
              patch("scraper.time.sleep"), \
              patch("scraper._get_showtime_enriched", return_value=[one_session]):
             result = scrape_all()
-        # 9 cinemas × 21 days = 189 calls, 1 session each
-        assert len(result) == len(CINEMA_IDS) * 21
+        assert len(result) == len(TEST_CINEMA_IDS) * 21
 
     def test_progress_callback_called(self):
-        """progress_callback must be called for each cinema/date combination."""
+        """progress_callback doit être appelé pour chaque combinaison cinéma/date."""
         calls = []
-        with patch("scraper.allocineAPI") as MockAPI, \
+        with patch("scraper._fetch_cinema_ids", return_value=TEST_CINEMA_IDS), \
+             patch("scraper._AllocineAPIWithHeaders"), \
              patch("scraper.time.sleep"), \
              patch("scraper._get_showtime_enriched", return_value=[]):
             scrape_all(progress_callback=lambda cur, tot, name: calls.append((cur, tot, name)))
-        assert len(calls) == len(CINEMA_IDS) * 21
+        assert len(calls) == len(TEST_CINEMA_IDS) * 21
         assert calls[0][0] == 1
-        assert calls[-1][0] == len(CINEMA_IDS) * 21
-        assert calls[0][1] == len(CINEMA_IDS) * 21
+        assert calls[-1][0] == len(TEST_CINEMA_IDS) * 21
+        assert calls[0][1] == len(TEST_CINEMA_IDS) * 21
 
     def test_covers_21_dates(self):
-        """Dates scraped must span 21 distinct days starting from today."""
+        """Les dates scrappées doivent couvrir 21 jours distincts à partir d'aujourd'hui."""
         from datetime import datetime, timedelta
         scraped_dates = []
 
@@ -305,7 +319,8 @@ class TestScrapeAll:
             scraped_dates.append(date_str)
             return []
 
-        with patch("scraper.allocineAPI") as MockAPI, \
+        with patch("scraper._fetch_cinema_ids", return_value=TEST_CINEMA_IDS), \
+             patch("scraper._AllocineAPIWithHeaders"), \
              patch("scraper.time.sleep"), \
              patch("scraper._get_showtime_enriched", side_effect=capture):
             scrape_all()
@@ -318,7 +333,7 @@ class TestScrapeAll:
         assert unique_dates[-1] == last_expected
 
     def test_continues_on_api_error(self):
-        """scrape_all must not raise even if some API calls fail."""
+        """scrape_all ne doit pas lever même si certains appels API échouent."""
         call_count = 0
 
         def flaky(api_instance, cinema_id, date_str):
@@ -328,10 +343,11 @@ class TestScrapeAll:
                 raise Exception("Transient error")
             return []
 
-        with patch("scraper.allocineAPI") as MockAPI, \
+        with patch("scraper._fetch_cinema_ids", return_value=TEST_CINEMA_IDS), \
+             patch("scraper._AllocineAPIWithHeaders"), \
              patch("scraper.time.sleep"), \
              patch("scraper._get_showtime_enriched", side_effect=flaky):
             result = scrape_all()
 
         assert isinstance(result, list)
-        assert call_count == len(CINEMA_IDS) * 21
+        assert call_count == len(TEST_CINEMA_IDS) * 21
