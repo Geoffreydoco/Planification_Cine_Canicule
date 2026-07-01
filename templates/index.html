@@ -851,6 +851,7 @@
      Filtering
   ──────────────────────────────────────────── */
   function getFilteredSessions() {
+    if (!DATA) return [];
     return DATA.sessions.filter(s => {
       if (!selectedCinemas.has(s.cinema)) return false;
       if (selectedFilms.size < allFilms.length && !selectedFilms.has(s.film)) return false;
@@ -1507,6 +1508,7 @@
      Apply filters + re-render
   ──────────────────────────────────────────── */
   function applyFilters() {
+    if (!DATA) return;
     const sessions = getFilteredSessions();
     const container = document.getElementById('view-container');
     const summaryEl = document.getElementById('summary-container');
