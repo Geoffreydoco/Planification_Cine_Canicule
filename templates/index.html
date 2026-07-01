@@ -1687,6 +1687,7 @@
     allGenres = [...new Set(DATA.sessions.flatMap(s => s.genres || []))].sort((a, b) => a.localeCompare(b, 'fr'));
     selectedGenres = new Set(allGenres);
     renderGenreOptions(allGenres);
+    updateGenreDropdownLabel();
 
     // Initial render
     applyFilters();
