@@ -42,7 +42,7 @@ def main():
     print(f"Saved {len(sessions)} sessions → {json_path}")
 
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    html_src = os.path.join(repo_root, "index.html")
+    html_src = os.path.join(repo_root, "templates", "index.html")
     html_dst = os.path.join(OUT_DIR, "index.html")
     shutil.copy2(html_src, html_dst)
     print(f"Copied index.html → {html_dst}")

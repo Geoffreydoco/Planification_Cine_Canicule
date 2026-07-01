@@ -21,7 +21,7 @@ _scrape_state = {
 
 def load_sessions():
     if not os.path.exists(DATA_FILE):
-        return {"updated_at": None, "sessions": []}
+        return {"updated_at": None, "sessions": [], "daily_temps": {}}
     with open(DATA_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -48,11 +48,7 @@ def run_scrape(progress_callback=None):
 
 @app.route("/")
 def index():
-    data = load_sessions()
-    return render_template(
-        "index.html",
-        sessions_json=json.dumps(data, ensure_ascii=False),
-    )
+    return render_template("index.html")
 
 
 def _run_scrape_background():
@@ -85,6 +81,11 @@ def refresh():
 def progress():
     with _scrape_lock:
         return jsonify(dict(_scrape_state))
+
+
+@app.route("/sessions.json")
+def sessions_data():
+    return jsonify(load_sessions())
 
 
 if __name__ == "__main__":

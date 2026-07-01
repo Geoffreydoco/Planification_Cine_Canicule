@@ -796,7 +796,7 @@
 </main>
 
 <script>
-  const DATA = {{ sessions_json | safe }};
+  let DATA = null;
 
   /* ────────────────────────────────────────────
      State
@@ -1835,7 +1835,16 @@
     document.getElementById('theme-label').textContent = 'Clair';
   }
 
-  init();
+  fetch('/sessions.json')
+    .then(r => r.json())
+    .then(data => {
+      DATA = data;
+      init();
+    })
+    .catch(() => {
+      const el = document.getElementById('meta') || document.getElementById('summary-container');
+      if (el) el.textContent = 'Erreur de chargement des données.';
+    });
 </script>
 
 <footer>
