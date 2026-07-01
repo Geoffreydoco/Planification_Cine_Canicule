@@ -1,3 +1,4 @@
+import json
 import re
 import threading
 import time
@@ -5,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 
 import requests
-from allocineAPI.allocineAPI import allocineAPI
+from allocineAPI.allocineAPI import allocineAPI, URLs
 
 _HEADERS = {
     "User-Agent": (
@@ -21,7 +22,6 @@ _HEADERS = {
 
 class _AllocineAPIWithHeaders(allocineAPI):
     def _get_json_request(self, path, url_params=None):
-        import json
         req = requests.get(path, params=url_params, headers=_HEADERS)
         if req.status_code != 200:
             raise Exception("Error " + str(req.status_code))
@@ -167,7 +167,6 @@ def _get_showtime_enriched(api_instance, cinema_id, date_str):
     film internalId (for URL) and runtime (for duration display).
     Returns list of {title, film_url, duration, showtimes: [{startsAt, diffusionVersion}]}.
     """
-    from allocineAPI.allocineAPI import URLs
     formatted_data = []
     page, total_pages = 0, 1
     while page < total_pages:
@@ -235,12 +234,12 @@ def _get_showtime_enriched(api_instance, cinema_id, date_str):
                         actors.append(name)
 
             showtimes = []
-            seen_ids = []
+            seen_ids = set()
             for showtimes_key in element.get("showtimes", {}).keys():
                 for showtime in element["showtimes"][showtimes_key]:
                     sid = showtime.get("internalId")
                     if sid not in seen_ids:
-                        seen_ids.append(sid)
+                        seen_ids.add(sid)
                         showtimes.append({
                             "startsAt": showtime.get("startsAt", ""),
                             "diffusionVersion": showtime.get("diffusionVersion", ""),
