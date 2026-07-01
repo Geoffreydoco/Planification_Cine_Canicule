@@ -14,7 +14,7 @@ DATA_FILE = os.path.join("data", "sessions.json")
 
 _scrape_lock = threading.Lock()
 _scrape_state = {
-    "running": False, "current": 0, "total": 189,
+    "running": False, "current": 0, "total": 0,
     "cinema": "", "done": False, "count": 0, "error": None
 }
 
@@ -75,7 +75,7 @@ def refresh():
         if _scrape_state["running"]:
             return jsonify({"status": "already_running"}), 409
         _scrape_state.update({
-            "running": True, "current": 0, "total": 189,
+            "running": True, "current": 0, "total": 0,
             "cinema": "", "done": False, "count": 0, "error": None
         })
     threading.Thread(target=_run_scrape_background, daemon=True).start()

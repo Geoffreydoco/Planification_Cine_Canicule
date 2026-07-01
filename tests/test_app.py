@@ -61,7 +61,7 @@ def test_progress_endpoint(client):
 
 def test_refresh_rejects_concurrent_scrape(client, monkeypatch):
     monkeypatch.setattr(flask_app, "_scrape_state", {
-        "running": True, "current": 0, "total": 189,
+        "running": True, "current": 0, "total": 0,
         "cinema": "", "done": False, "count": 0, "error": None
     })
     resp = client.post("/refresh")
