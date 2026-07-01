@@ -758,6 +758,26 @@
       </nav>
     </div>
 
+    <!-- Genre filter -->
+    <div class="filter-group">
+      <h2>Genres du film</h2>
+      <nav class="fr-nav" id="genre-nav" role="navigation" aria-label="Filtre par genre">
+        <ul class="fr-nav__list">
+          <li class="fr-nav__item">
+            <button class="fr-nav__btn" aria-expanded="false" aria-controls="genre-menu-panel" id="genre-nav-btn" onclick="toggleGenreDropdown()">
+              <span id="genre-dropdown-label">Tous les genres</span>
+            </button>
+            <div class="fr-collapse fr-menu" id="genre-menu-panel">
+              <div style="padding:6px 6px 4px;">
+                <input type="text" id="genre-filter-search" placeholder="Rechercher un genre…" oninput="filterGenreList(this.value)">
+              </div>
+              <ul class="fr-menu__list" id="genre-options"></ul>
+            </div>
+          </li>
+        </ul>
+      </nav>
+    </div>
+
     <!-- Group by film toggle + advanced info -->
     <div class="filter-group">
       <h2>Options</h2>
