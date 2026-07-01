@@ -828,6 +828,8 @@
   let allCinemas = [];
   let selectedFilms = new Set();
   let allFilms = [];
+  let selectedGenres = new Set();
+  let allGenres = [];
   let selectedDay = null;  // null = auto-select first available day
   let groupByFilm = true;
   let showAdvancedInfo = false;
@@ -877,6 +879,11 @@
     return DATA.sessions.filter(s => {
       if (!selectedCinemas.has(s.cinema)) return false;
       if (selectedFilms.size < allFilms.length && !selectedFilms.has(s.film)) return false;
+      if (selectedGenres.size < allGenres.length) {
+        const sGenres = s.genres || [];
+        if (sGenres.length === 0) return false;
+        if (!sGenres.some(g => selectedGenres.has(g))) return false;
+      }
       if (onlyAllAges && s.certificate !== 'Tout public' && s.certificate !== 'Tous publics') return false;
       return true;
     });
@@ -1676,6 +1683,11 @@
     selectedFilms = new Set(allFilms);
     renderFilmOptions(allFilms);
 
+    // Build genre dropdown
+    allGenres = [...new Set(DATA.sessions.flatMap(s => s.genres || []))].sort((a, b) => a.localeCompare(b, 'fr'));
+    selectedGenres = new Set(allGenres);
+    renderGenreOptions(allGenres);
+
     // Initial render
     applyFilters();
   }
@@ -1802,6 +1814,7 @@
   function resetFilters() {
     selectAllCinemas();
     selectAllFilms();
+    selectAllGenres();
     groupByFilm = true;
     document.getElementById('group-by-film').checked = true;
     showAdvancedInfo = false;
@@ -1830,6 +1843,73 @@
     }
   });
 
+  function renderGenreOptions(genres) {
+    const container = document.getElementById('genre-options');
+    const allSelected = selectedGenres.size === allGenres.length;
+    const allCls = 'fr-nav__link' + (allSelected ? ' fr-nav__link--active' : '');
+    let html = `<li><button class="${allCls}" data-action="all-genres">Tous les genres</button></li>`;
+    html += genres.map(g => {
+      const isActive = !allSelected && selectedGenres.has(g);
+      const cls = 'fr-nav__link' + (isActive ? ' fr-nav__link--active' : '');
+      return `<li><button class="${cls}" data-genre="${escHtml(g)}">${escHtml(g)}</button></li>`;
+    }).join('');
+    container.innerHTML = html;
+  }
+
+  function updateGenreDropdownLabel() {
+    const label = document.getElementById('genre-dropdown-label');
+    if (selectedGenres.size === allGenres.length) {
+      label.textContent = 'Tous les genres';
+    } else if (selectedGenres.size === 1) {
+      label.textContent = [...selectedGenres][0];
+    } else {
+      label.textContent = `${selectedGenres.size} genres sélectionnés`;
+    }
+  }
+
+  function filterGenreList(query) {
+    const q = query.trim().toLowerCase();
+    const filtered = q ? allGenres.filter(g => g.toLowerCase().includes(q)) : allGenres;
+    renderGenreOptions(filtered);
+  }
+
+  function toggleGenre(genre) {
+    if (selectedGenres.size === allGenres.length) {
+      selectedGenres = new Set([genre]);
+    } else if (selectedGenres.has(genre)) {
+      selectedGenres.delete(genre);
+      if (selectedGenres.size === 0) selectedGenres = new Set(allGenres);
+    } else {
+      selectedGenres.add(genre);
+    }
+    renderGenreOptions(allGenres);
+    updateGenreDropdownLabel();
+    applyFilters();
+  }
+
+  function selectAllGenres() {
+    selectedGenres = new Set(allGenres);
+    renderGenreOptions(allGenres);
+    updateGenreDropdownLabel();
+    applyFilters();
+  }
+
+  function toggleGenreDropdown() {
+    const btn = document.getElementById('genre-nav-btn');
+    const panel = document.getElementById('genre-menu-panel');
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', String(!expanded));
+    panel.classList.toggle('fr-collapse--expanded', !expanded);
+  }
+
+  document.getElementById('genre-options').addEventListener('click', e => {
+    const opt = e.target.closest('button[data-genre], button[data-action]');
+    if (!opt) return;
+    e.stopPropagation();
+    if (opt.dataset.action === 'all-genres') selectAllGenres();
+    else toggleGenre(opt.dataset.genre);
+  });
+
   document.addEventListener('click', e => {
     const filmNav = document.getElementById('film-nav');
     if (filmNav && !filmNav.contains(e.target)) {
@@ -1840,6 +1920,11 @@
     if (cinemaNav && !cinemaNav.contains(e.target)) {
       document.getElementById('cinema-nav-btn').setAttribute('aria-expanded', 'false');
       document.getElementById('cinema-menu-panel').classList.remove('fr-collapse--expanded');
+    }
+    const genreNav = document.getElementById('genre-nav');
+    if (genreNav && !genreNav.contains(e.target)) {
+      document.getElementById('genre-nav-btn').setAttribute('aria-expanded', 'false');
+      document.getElementById('genre-menu-panel').classList.remove('fr-collapse--expanded');
     }
   });
 
