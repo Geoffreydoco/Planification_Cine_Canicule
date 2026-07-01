@@ -28,18 +28,48 @@ class _AllocineAPIWithHeaders(allocineAPI):
         return json.loads(req.content.decode("utf-8"))
 
 
-CINEMA_IDS = {
-    "Pathé Bellecour":   "P0012",
-    "Lumière Terreaux":  "P0017",
-    "Lumière Fourmi":    "W6903",
-    "Lumière Bellecour": "P0015",
-    "Le Cinéma":         "P0009",
-    "Cinéma Opéra":      "P0006",
-    "Le Zola":           "P0014",
-    "UGC Part-Dieu":     "P0036",
-    "Institut Lumière":  "P0050",
-    "Le Comoedia":       "P0003",
+# Fallback hardcoded in case the discovery call fails
+_FALLBACK_CINEMA_IDS = {
+    "Pathé Lyon - Bellecour":        "P0012",
+    "Cinéma Lumière Terreaux":       "P0017",
+    "Cinéma Lumière La Fourmi":      "W6903",
+    "Cinéma Lumière Bellecour":      "P0015",
+    "Le Cinéma":                     "P0009",
+    "Le Cinéma Opéra":               "P0006",
+    "Le Zola":                       "P0014",
+    "UGC Ciné Cité Lyon Part-Dieu":  "P0036",
+    "Institut Lumière":              "P0050",
+    "Cinéma Comoedia":               "P3757",
 }
+
+
+def _fetch_cinema_ids():
+    """Discover all cinemas in Lyon and Villeurbanne from AlloCiné.
+
+    Combines the Lyon city list with Villeurbanne cinemas from the Rhône
+    department page (filtered by ZIP 69100). Falls back to the hardcoded
+    list on any error.
+    """
+    try:
+        api = _AllocineAPIWithHeaders()
+        result = {}
+
+        # All Lyon cinemas via city ID
+        for c in api.get_cinema("ville-113315"):
+            result[c["name"]] = c["id"]
+
+        # Villeurbanne cinemas (ZIP 69100) via Rhône department
+        for c in api.get_cinema("departement-83196"):
+            address = c.get("address", "")
+            zip_code = next((w for w in address.split() if w.isdigit() and len(w) == 5), "")
+            if zip_code == "69100" and c["id"] not in result.values():
+                result[c["name"]] = c["id"]
+
+        if result:
+            return result
+    except Exception:
+        pass
+    return _FALLBACK_CINEMA_IDS
 
 # Map allocineAPI diffusionVersion values to display labels
 _VERSION_MAP = {
@@ -71,6 +101,7 @@ def _api_to_sessions(api_result, cinema_name, date_str):
         press_rating = film.get("press_rating")
         genres = film.get("genres", [])
         actors = film.get("actors", [])
+        certificate = film.get("certificate")
         for showtime in film.get("showtimes", []):
             starts_at = showtime.get("startsAt", "")
             # startsAt is ISO format: "2026-06-30T14:00:00"
@@ -95,6 +126,7 @@ def _api_to_sessions(api_result, cinema_name, date_str):
                 "press_rating": press_rating,
                 "genres": genres,
                 "actors": actors,
+                "certificate": certificate,
                 "date": date_str,
                 "heure": heure,
                 "version": version,
@@ -113,10 +145,12 @@ def _rate_limited_request(api_instance, url, retries=4):
     """Throttle + retry with exponential backoff on 429."""
     for attempt in range(retries):
         with _rate_lock:
-            gap = _MIN_INTERVAL - (time.time() - _last_req_at[0])
-            if gap > 0:
-                time.sleep(gap)
-            _last_req_at[0] = time.time()
+            now = time.time()
+            wait_until = _last_req_at[0] + _MIN_INTERVAL
+            gap = wait_until - now
+            _last_req_at[0] = max(now, wait_until)  # réserver le slot avant de relâcher
+        if gap > 0:
+            time.sleep(gap)  # dormir EN DEHORS du verrou
         try:
             return api_instance._get_json_request(url)
         except Exception as e:
@@ -182,6 +216,13 @@ def _get_showtime_enriched(api_instance, cinema_id, date_str):
             # Genres
             genres = [g["translate"] for g in (movie.get("genres") or []) if g.get("translate")]
 
+            # Age certificate (classification CNC)
+            releases = movie.get("releases") or []
+            certificate = None
+            if releases:
+                cert = (releases[0].get("certificate") or {})
+                certificate = cert.get("label") or cert.get("code") or None
+
             # Main cast (first 4)
             cast_edges = (movie.get("cast") or {}).get("edges") or []
             actors = []
@@ -216,6 +257,7 @@ def _get_showtime_enriched(api_instance, cinema_id, date_str):
                 "press_rating": press_rating,
                 "genres": genres,
                 "actors": actors,
+                "certificate": certificate,
                 "showtimes": showtimes,
             })
     return formatted_data
@@ -236,18 +278,21 @@ def scrape_cinema_day(cinema_name, cinema_id, date_str, api=None):
 
 
 def scrape_all(progress_callback=None):
-    """Fetch sessions for all 9 cinemas over 21 days (3 weeks).
+    """Fetch sessions for all cinemas in Lyon and Villeurbanne over 21 days.
 
+    Cinema list is discovered dynamically from AlloCiné at call time.
     5 cinemas scraped in parallel; each cinema's 21 days run sequentially
     with a 0.2s delay. Reduces total time from ~3 min to ~35-45 seconds.
 
     progress_callback(current, total, cinema_name) called for each request.
     Returns flat list of session dicts without temperatures.
     """
+    cinema_ids = _fetch_cinema_ids()
+
     today = datetime.now().date()
     dates = [(today + timedelta(days=i)).isoformat() for i in range(21)]
 
-    total = len(CINEMA_IDS) * len(dates)
+    total = len(cinema_ids) * len(dates)
     lock = threading.Lock()
     counter = [0]
     all_sessions = []
@@ -267,7 +312,7 @@ def scrape_all(progress_callback=None):
     with ThreadPoolExecutor(max_workers=5) as executor:
         futures = {
             executor.submit(fetch_cinema, name, cid): name
-            for name, cid in CINEMA_IDS.items()
+            for name, cid in cinema_ids.items()
         }
         for future in as_completed(futures):
             all_sessions.extend(future.result())
