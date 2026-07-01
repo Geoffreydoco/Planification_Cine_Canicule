@@ -144,11 +144,11 @@
     }
 
     /* ── DSFR menu déroulant (thème sombre) — cinémas + films ── */
-    #film-nav, #cinema-nav { position: relative; }
-    #film-nav .fr-nav__list, #cinema-nav .fr-nav__list { list-style: none; margin: 0; padding: 0; }
-    #film-nav .fr-nav__item, #cinema-nav .fr-nav__item { position: relative; }
+    #film-nav, #cinema-nav, #genre-nav { position: relative; }
+    #film-nav .fr-nav__list, #cinema-nav .fr-nav__list, #genre-nav .fr-nav__list { list-style: none; margin: 0; padding: 0; }
+    #film-nav .fr-nav__item, #cinema-nav .fr-nav__item, #genre-nav .fr-nav__item { position: relative; }
 
-    #film-nav .fr-nav__btn, #cinema-nav .fr-nav__btn {
+    #film-nav .fr-nav__btn, #cinema-nav .fr-nav__btn, #genre-nav .fr-nav__btn {
       width: 100%;
       background: var(--bg);
       border: 1px solid var(--border);
@@ -164,7 +164,7 @@
       align-items: center;
       gap: 0.5rem;
     }
-    #film-nav .fr-nav__btn::after, #cinema-nav .fr-nav__btn::after {
+    #film-nav .fr-nav__btn::after, #cinema-nav .fr-nav__btn::after, #genre-nav .fr-nav__btn::after {
       content: '';
       flex-shrink: 0;
       width: 1rem; height: 1rem;
@@ -174,10 +174,11 @@
       transition: transform 0.2s ease;
     }
     #film-nav .fr-nav__btn[aria-expanded="true"]::after,
-    #cinema-nav .fr-nav__btn[aria-expanded="true"]::after { transform: rotate(180deg); }
-    #film-nav .fr-nav__btn:hover, #cinema-nav .fr-nav__btn:hover { border-color: var(--accent); }
+    #cinema-nav .fr-nav__btn[aria-expanded="true"]::after,
+    #genre-nav .fr-nav__btn[aria-expanded="true"]::after { transform: rotate(180deg); }
+    #film-nav .fr-nav__btn:hover, #cinema-nav .fr-nav__btn:hover, #genre-nav .fr-nav__btn:hover { border-color: var(--accent); }
 
-    #film-nav .fr-collapse, #cinema-nav .fr-collapse {
+    #film-nav .fr-collapse, #cinema-nav .fr-collapse, #genre-nav .fr-collapse {
       display: none;
       position: absolute;
       z-index: 200;
@@ -188,9 +189,9 @@
       border-radius: 4px;
       box-shadow: 0 6px 20px rgba(0,0,0,.5);
     }
-    #film-nav .fr-collapse--expanded, #cinema-nav .fr-collapse--expanded { display: block; }
+    #film-nav .fr-collapse--expanded, #cinema-nav .fr-collapse--expanded, #genre-nav .fr-collapse--expanded { display: block; }
 
-    #film-filter-search, #cinema-filter-search {
+    #film-filter-search, #cinema-filter-search, #genre-filter-search {
       width: 100%;
       box-sizing: border-box;
       background: var(--bg);
@@ -201,10 +202,10 @@
       font-size: 0.8rem;
       font-family: inherit;
     }
-    #film-filter-search::placeholder, #cinema-filter-search::placeholder { color: var(--muted); }
-    #film-filter-search:focus, #cinema-filter-search:focus { outline: none; border-color: var(--accent); }
+    #film-filter-search::placeholder, #cinema-filter-search::placeholder, #genre-filter-search::placeholder { color: var(--muted); }
+    #film-filter-search:focus, #cinema-filter-search:focus, #genre-filter-search:focus { outline: none; border-color: var(--accent); }
 
-    #film-nav .fr-menu__list, #cinema-nav .fr-menu__list {
+    #film-nav .fr-menu__list, #cinema-nav .fr-menu__list, #genre-nav .fr-menu__list {
       list-style: none;
       margin: 0; padding: 0;
       max-height: 240px;
@@ -213,7 +214,7 @@
       scrollbar-color: #3a3a5a transparent;
     }
 
-    #film-nav .fr-nav__link, #cinema-nav .fr-nav__link {
+    #film-nav .fr-nav__link, #cinema-nav .fr-nav__link, #genre-nav .fr-nav__link {
       display: block;
       width: 100%;
       background: none;
@@ -227,16 +228,16 @@
       cursor: pointer;
       box-sizing: border-box;
     }
-    #film-nav .fr-nav__link:hover, #cinema-nav .fr-nav__link:hover {
+    #film-nav .fr-nav__link:hover, #cinema-nav .fr-nav__link:hover, #genre-nav .fr-nav__link:hover {
       background: rgba(255,255,255,.05);
       border-left-color: var(--accent);
     }
-    #film-nav .fr-nav__link--active, #cinema-nav .fr-nav__link--active {
+    #film-nav .fr-nav__link--active, #cinema-nav .fr-nav__link--active, #genre-nav .fr-nav__link--active {
       color: var(--accent);
       border-left-color: var(--accent);
       font-weight: 600;
     }
-    #film-nav li:first-child .fr-nav__link, #cinema-nav li:first-child .fr-nav__link {
+    #film-nav li:first-child .fr-nav__link, #cinema-nav li:first-child .fr-nav__link, #genre-nav li:first-child .fr-nav__link {
       border-bottom: 1px solid var(--border);
       font-style: italic;
     }
@@ -598,7 +599,8 @@
     body.light .film-card-rating { background:rgba(0,0,0,.07); color:#16213e; }
     body.light .film-card-genres { color:#1a55a0; }  /* 7:1 sur blanc ✓ */
     body.light #film-nav .fr-collapse,
-    body.light #cinema-nav .fr-collapse { background:#fff; border-color:#c0ccd8; }
+    body.light #cinema-nav .fr-collapse,
+    body.light #genre-nav .fr-collapse { background:#fff; border-color:#c0ccd8; }
     body.light #progress-area { background:#dde6f2; }
     body.light .cinema-map-label { background:#1a4070; }
     /* Boutons — contraste min 4.5:1 */
