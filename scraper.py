@@ -293,7 +293,7 @@ def scrape_cinema_day(cinema_name, cinema_id, date_str, api=None):
     try:
         result = _get_showtime_enriched(api, cinema_id, date_str)
         sessions = _api_to_sessions(result, cinema_name, date_str)
-        cinema_url = f"https://www.allocine.fr/salle/cinema/{cinema_id}/"
+        cinema_url = f"https://www.allocine.fr/seance/salle_gen_csalle={cinema_id}.html#shwt_date={date_str}"
         for s in sessions:
             s["cinema_url"] = cinema_url
         return sessions
