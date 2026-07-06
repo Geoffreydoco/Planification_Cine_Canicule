@@ -14,7 +14,7 @@ Quand il fait chaud à Lyon, les cinémas climatisés deviennent des havres. Cin
 
 ```
 app.py                    Serveur Flask dev — interface + API /sessions.json + refresh
-scraper.py                Scrape AlloCiné (découverte dynamique, ~10 cinémas × 21 jours, 5 threads)
+scraper.py                Scrape AlloCiné (découverte dynamique, ~10 cinémas × 15 jours, 5 threads)
 weather.py                Températures Open-Meteo (1 appel HTTP combiné horaire + journalier)
 templates/index.html      Frontend unique partagé entre Flask et build statique
 scripts/build_static.py   Génère _site/ pour GitHub Pages

@@ -4,51 +4,93 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Planificateur Ciné Canicule 🎬🌡️</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #1a1a2e;
-      --card:      #16213e;
-      --accent:    #e94560;
-      --text:      #e0e0e0;
-      --muted:     #8888aa;
-      --border:    #2a2a4a;
+      --bg:          oklch(15% 0.014 250);
+      --card:        oklch(19% 0.014 250);
+      --surface:     oklch(24% 0.015 250);
+      --surface-2:   oklch(29% 0.015 250);
+      --border:      oklch(27% 0.015 250);
+      --border-lt:   oklch(30% 0.015 250);
+
+      --accent:      oklch(64% 0.17 25);
+      --accent-on:   oklch(15% 0.014 250);
+      --accent-blue: oklch(64% 0.17 235);
+      --accent-blue-lt: oklch(70% 0.13 235);
+      --gold:        oklch(76% 0.13 90);
+      --temp-color:  oklch(60% 0.09 40);
+
+      --text:        oklch(97% 0.003 250);
+      --text-2:      oklch(78% 0.006 250);
+      --muted:       oklch(60% 0.01 250);
 
       --blue:      #3498db;
       --green:     #2ecc71;
       --orange:    #f39c12;
       --darkorange:#e67e22;
       --red:       #e74c3c;
+
+      --font-display: 'Inter', sans-serif;
+      --font-mono:    'IBM Plex Mono', monospace;
     }
 
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family: var(--font-display);
+      font-weight: 400;
       min-height: 100vh;
     }
 
     /* ── Header ── */
     header {
-      background: var(--card);
-      border-bottom: 2px solid var(--accent);
-      padding: 1.2rem 1.5rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 28px;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 1rem;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .header-monogram {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .header-monogram span {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 16px;
+      color: var(--accent-on);
     }
 
     header h1 {
-      font-size: 1.6rem;
+      font-family: var(--font-display);
+      font-size: 22px;
       font-weight: 700;
-      color: var(--accent);
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+      color: var(--text);
       flex: 0 0 auto;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     #meta {
-      font-size: 0.82rem;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 400;
       color: var(--muted);
       flex: 1 1 auto;
     }
@@ -56,11 +98,11 @@
     /* ── Refresh button ── */
     #btn-refresh {
       background: var(--accent);
-      color: #fff;
+      color: var(--accent-on);
       border: none;
-      border-radius: 6px;
-      padding: 0.45rem 1rem;
-      font-size: 0.85rem;
+      border-radius: 999px;
+      padding: 9px 18px;
+      font-size: 14px;
       font-weight: 600;
       cursor: pointer;
       display: flex;
@@ -70,8 +112,8 @@
     }
     #btn-refresh:disabled { opacity: .5; cursor: default; }
 
-    .toggle-btn { padding: 3px 10px; background: transparent; border: 1px solid #3a3a5a; color: #aaa; border-radius: 3px; cursor: pointer; font-size: 0.78rem; }
-    .toggle-btn:hover { border-color: #e94560; color: #e94560; }
+    .toggle-btn { padding: 3px 10px; background: transparent; border: 1px solid var(--border-lt); color: var(--text-2); border-radius: 3px; cursor: pointer; font-size: 0.78rem; font-family: var(--font-display); }
+    .toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
 
     /* ── Main layout ── */
     main {
@@ -81,58 +123,113 @@
 
     /* ── Sidebar ── */
     aside {
-      width: 220px;
+      width: 230px;
       flex-shrink: 0;
       background: var(--card);
       border-right: 1px solid var(--border);
-      padding: 1.2rem 1rem;
+      padding: 22px 20px;
       min-height: calc(100vh - 70px);
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
     }
 
     aside h2 {
-      font-size: 0.7rem;
+      font-family: var(--font-display);
+      font-size: 11px;
       font-weight: 700;
-      letter-spacing: .1em;
+      letter-spacing: .08em;
       text-transform: uppercase;
       color: var(--muted);
-      margin-bottom: .7rem;
+      margin-bottom: .5rem;
+    }
+
+    /* ── Sidebar collapse ── */
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .5rem;
+    }
+    .sidebar-header h2 { margin-bottom: 0; font-size: 12px; }
+    #sidebar-toggle { flex-shrink: 0; white-space: nowrap; }
+    aside.collapsed {
+      width: 44px;
+      min-width: 44px;
+      padding: 22px .4rem;
+      align-self: flex-start;
+      min-height: 0;
+      gap: 0;
+    }
+    aside.collapsed #sidebar-content { display: none; }
+    aside.collapsed .sidebar-header { justify-content: center; }
+    aside.collapsed .sidebar-header h2 { display: none; }
+
+    #sidebar-content {
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
     }
 
     /* View toggle */
     #view-toggle {
       display: flex;
-      background: var(--bg);
-      border-radius: 6px;
-      padding: 3px;
-      margin-bottom: 1.4rem;
-      gap: 3px;
+      gap: 6px;
     }
     .view-btn {
       flex: 1;
-      padding: .35rem .5rem;
-      border: none;
-      border-radius: 4px;
-      background: transparent;
-      color: var(--muted);
-      font-size: 0.8rem;
+      padding: 8px 6px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card);
+      color: var(--text-2);
+      font-family: var(--font-display);
+      font-size: 12px;
       font-weight: 600;
       cursor: pointer;
       transition: all .15s;
     }
     .view-btn.active {
       background: var(--accent);
-      color: #fff;
+      color: var(--accent-on);
+      border-color: var(--accent);
     }
 
+    /* ── Mode canicule — isolated switch row ── */
+    .heat-toggle {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .heat-toggle span.heat-label { font-family: var(--font-display); font-size: 13px; font-weight: 600; color: var(--text); }
+    .heat-toggle input[type="checkbox"] { display: none; }
+    .heat-track {
+      width: 36px; height: 20px; border-radius: 999px;
+      background: var(--border-lt); position: relative; transition: background .15s; flex-shrink: 0;
+    }
+    .heat-knob {
+      position: absolute; top: 2px; left: 2px;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--text); transition: left .15s;
+    }
+    .heat-toggle input:checked + .heat-track { background: var(--accent); }
+    .heat-toggle input:checked + .heat-track .heat-knob { left: 18px; background: var(--accent-on); }
+
     /* Filters */
-    .filter-group { margin-bottom: 1.4rem; }
+    .filter-group { display: flex; flex-direction: column; gap: 6px; }
 
     .filter-group label {
       display: flex;
       align-items: center;
       gap: .45rem;
-      font-size: 0.82rem;
-      color: var(--text);
+      font-size: 13px;
+      color: var(--text-2);
       padding: .2rem 0;
       cursor: pointer;
       word-break: break-word;
@@ -150,13 +247,13 @@
 
     #film-nav .fr-nav__btn, #cinema-nav .fr-nav__btn, #genre-nav .fr-nav__btn {
       width: 100%;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border-lt);
+      border-radius: 10px;
       color: var(--text);
-      padding: 0.5rem 0.75rem;
-      font-size: 0.85rem;
-      font-family: inherit;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-family: var(--font-display);
       text-align: left;
       cursor: pointer;
       display: flex;
@@ -165,12 +262,9 @@
       gap: 0.5rem;
     }
     #film-nav .fr-nav__btn::after, #cinema-nav .fr-nav__btn::after, #genre-nav .fr-nav__btn::after {
-      content: '';
+      content: '⌄';
       flex-shrink: 0;
-      width: 1rem; height: 1rem;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z' fill='%23e0e0e0'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: center;
+      color: var(--muted);
       transition: transform 0.2s ease;
     }
     #film-nav .fr-nav__btn[aria-expanded="true"]::after,
@@ -184,9 +278,9 @@
       z-index: 200;
       left: 0; right: 0;
       top: calc(100% + 2px);
-      background: #1a1a2e;
-      border: 1px solid var(--border);
-      border-radius: 4px;
+      background: var(--card);
+      border: 1px solid var(--border-lt);
+      border-radius: 10px;
       box-shadow: 0 6px 20px rgba(0,0,0,.5);
     }
     #film-nav .fr-collapse--expanded, #cinema-nav .fr-collapse--expanded, #genre-nav .fr-collapse--expanded { display: block; }
@@ -194,13 +288,13 @@
     #film-filter-search, #cinema-filter-search, #genre-filter-search {
       width: 100%;
       box-sizing: border-box;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border-lt);
+      border-radius: 6px;
       color: var(--text);
       padding: 0.35rem 0.5rem;
       font-size: 0.8rem;
-      font-family: inherit;
+      font-family: var(--font-display);
     }
     #film-filter-search::placeholder, #cinema-filter-search::placeholder, #genre-filter-search::placeholder { color: var(--muted); }
     #film-filter-search:focus, #cinema-filter-search:focus, #genre-filter-search:focus { outline: none; border-color: var(--accent); }
@@ -211,7 +305,7 @@
       max-height: 240px;
       overflow-y: auto;
       scrollbar-width: thin;
-      scrollbar-color: #3a3a5a transparent;
+      scrollbar-color: var(--border-lt) transparent;
     }
 
     #film-nav .fr-nav__link, #cinema-nav .fr-nav__link, #genre-nav .fr-nav__link {
@@ -223,7 +317,7 @@
       color: var(--text);
       padding: 0.5rem 0.75rem;
       font-size: 0.82rem;
-      font-family: inherit;
+      font-family: var(--font-display);
       text-align: left;
       cursor: pointer;
       box-sizing: border-box;
@@ -261,8 +355,10 @@
     .group { margin-bottom: 2rem; }
 
     .group-header {
-      font-size: 1rem;
-      font-weight: 700;
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
       color: var(--accent);
       margin-bottom: .6rem;
       padding-bottom: .35rem;
@@ -280,9 +376,9 @@
     thead th {
       background: var(--card);
       color: var(--muted);
-      font-size: 0.7rem;
-      font-weight: 700;
-      letter-spacing: .06em;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: .1em;
       text-transform: uppercase;
       padding: .5rem .75rem;
       text-align: left;
@@ -312,24 +408,46 @@
       white-space: nowrap;
     }
 
-    /* ── Calendar button ── */
+    /* ── Calendar button (ghost, ready to attach to a session pill) ── */
     .cal-btn {
       display: inline-flex;
       align-items: center;
       background: transparent;
-      border: 1px solid #3a3a5a;
-      color: #888;
-      border-radius: 4px;
-      padding: 1px 5px;
-      font-size: 0.72rem;
+      border: none;
+      color: var(--muted);
+      border-radius: 5px;
+      padding: 3px 6px;
+      font-size: 11px;
       cursor: pointer;
       text-decoration: none;
       line-height: 1.4;
-      transition: border-color .15s, color .15s;
+      transition: color .15s;
     }
     .cal-btn:hover {
-      border-color: #e94560;
-      color: #e94560;
+      color: var(--accent);
+    }
+
+    /* ── Booking button (ghost, attached to session pill) ── */
+    .book-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: color-mix(in oklch, var(--accent) 15%, transparent);
+      border: none;
+      color: color-mix(in oklch, var(--accent) 78%, var(--text));
+      border-radius: 5px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      line-height: 1.4;
+      white-space: nowrap;
+      transition: background .15s;
+    }
+    .book-btn img { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
+    .book-btn:hover {
+      background: color-mix(in oklch, var(--accent) 28%, transparent);
     }
 
     /* ── Row color coding ── */
@@ -350,15 +468,10 @@
     #empty-state .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
     #empty-state p { font-size: 1rem; }
 
-    /* ── Day nav ── */
+    /* ── Day nav (merged day + temp-range pill row) ── */
     #day-nav {
-      display: flex;
-      gap: 6px;
-      overflow-x: auto;
-      padding: 10px 16px;
-      margin-bottom: 12px;
       scrollbar-width: thin;
-      scrollbar-color: #3a3a5a transparent;
+      scrollbar-color: var(--border-lt) transparent;
     }
 
     /* ── Film tooltip ── */
@@ -369,8 +482,8 @@
       width: min(340px, calc(100vw - 24px));
       max-height: calc(100vh - 24px);
       overflow-y: auto;
-      background: #0f1b35;
-      border: 1px solid #2a3a6a;
+      background: var(--card);
+      border: 1px solid var(--border-lt);
       border-radius: 10px;
       box-shadow: 0 8px 32px rgba(0,0,0,.7);
       padding: 12px;
@@ -385,14 +498,15 @@
       display: block;
     }
     #film-tooltip .tt-title {
-      font-size: 0.9rem;
+      font-family: var(--font-display);
+      font-size: 16px;
       font-weight: 700;
-      color: #e0e0e0;
+      color: var(--text);
       margin-bottom: 6px;
     }
     #film-tooltip .tt-synopsis {
       font-size: 0.78rem;
-      color: #9999bb;
+      color: var(--muted);
       line-height: 1.5;
       max-height: min(140px, 22vh);
       overflow: hidden;
@@ -403,30 +517,42 @@
 
     /* ── Vue C — Par film (cartes) ── */
     .film-card-day-header {
-      padding: 10px 24px 4px;
-      font-size: 0.95rem;
-      font-weight: 600;
+      font-family: var(--font-display);
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      padding: 20px 28px 0;
+      font-size: 20px;
+      font-weight: 700;
       color: var(--text);
       text-transform: capitalize;
     }
+    .film-card-day-count {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--muted);
+      text-transform: none;
+    }
     #film-cards-container {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-      gap: 16px;
-      padding: 12px 24px 24px;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 20px;
+      padding: 20px 28px 28px;
     }
     .film-card {
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 14px;
       overflow: hidden;
       display: flex;
       flex-direction: column;
     }
     .film-card-poster {
-      height: 180px;
+      position: relative;
+      aspect-ratio: 2 / 3;
       overflow: hidden;
-      background: #1a1a2e;
+      background: linear-gradient(135deg, var(--surface-2), var(--bg));
       flex-shrink: 0;
     }
     .film-card-poster img {
@@ -436,16 +562,30 @@
       object-position: center top;
       display: block;
     }
+    .film-card-warning {
+      position: absolute;
+      top: 10px; right: 10px;
+      background: color-mix(in oklch, var(--bg) 75%, transparent);
+      backdrop-filter: blur(4px);
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
     .film-card-body {
-      padding: 12px;
+      padding: 16px;
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 10px;
     }
     .film-card-title {
-      font-size: 0.95rem;
+      font-family: var(--font-display);
+      font-size: 16px;
       font-weight: 700;
+      line-height: 1.25;
       margin: 0;
       color: var(--text);
     }
@@ -454,41 +594,40 @@
     .film-card-meta {
       display: flex;
       flex-wrap: wrap;
-      gap: 5px;
       align-items: center;
-      font-size: 0.78rem;
+      gap: 10px;
+      font-family: var(--font-mono);
+      font-size: 12px;
       color: var(--muted);
     }
-    .film-card-rating {
-      background: rgba(255,255,255,.07);
-      border-radius: 4px;
-      padding: 1px 6px;
-      font-size: 0.75rem;
-    }
+    .film-card-meta .sep { color: color-mix(in oklch, var(--muted) 55%, transparent); }
+    .film-card-meta .rating-public { color: var(--gold); }
+    .film-card-meta .rating-press { color: var(--accent-blue-lt); }
     .film-card-genres {
-      font-size: 0.75rem;
-      color: #7a9fd4;
+      font-size: 12px;
+      color: var(--muted);
     }
     .cert-badge {
+      align-self: flex-start;
       display: inline-block;
-      padding: 1px 7px;
-      border-radius: 4px;
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: #fff;
+      padding: 3px 9px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--surface-2);
+      color: var(--text-2);
       white-space: nowrap;
-      vertical-align: middle;
     }
     .film-card-crew {
-      font-size: 0.75rem;
+      font-size: 12px;
       color: var(--muted);
     }
     .film-card-synopsis {
-      font-size: 0.75rem;
-      color: var(--muted);
+      font-size: 13px;
+      color: var(--text-2);
       line-height: 1.5;
       display: -webkit-box;
-      -webkit-line-clamp: 4;
+      -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
       overflow: hidden;
       margin: 0;
@@ -497,20 +636,48 @@
     .film-card-sessions {
       border-top: 1px solid var(--border);
       padding-top: 8px;
-      margin-top: 4px;
+      margin-top: 2px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
     }
     .film-card-cinema-name {
-      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .03em;
+      text-transform: uppercase;
       color: var(--muted);
       margin-bottom: 3px;
     }
     .film-card-session-badges {
       display: flex;
       flex-wrap: wrap;
-      gap: 4px 8px;
+      gap: 6px;
+    }
+    .session-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border-lt);
+      border-radius: 8px;
+      padding: 5px 6px 5px 10px;
+    }
+    .session-pill .time {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .session-pill .temp {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--temp-color);
+    }
+    .session-pill .book-btn,
+    .session-pill .cal-btn {
+      margin-left: 2px;
     }
 
     /* ── Responsive ── */
@@ -544,78 +711,64 @@
       line-height: 1.6;
     }
     footer details p + p { border-top: 1px solid var(--border); }
-    footer a { color: #7a9fd4; }
-    footer a:hover { color: #e94560; }
+    footer a { color: var(--accent-blue-lt); }
+    footer a:hover { color: var(--accent); }
 
     /* ── Header logos & actions ── */
-    .header-left { display:flex; flex-direction:row; align-items:center; gap:14px; flex:0 0 auto; }
+    .header-left { display:flex; flex-direction:row; align-items:center; gap:14px; flex:0 0 auto; min-width:0; }
     .header-logos { display:flex; gap:8px; align-items:center; }
     .header-logo {
-      height: 36px; width: 36px;
+      height: 30px; width: 30px;
       border-radius: 8px;
       object-fit: contain;
-      background: rgba(255,255,255,.92);
+      background: var(--surface);
+      border: 1px solid var(--border-lt);
       padding: 3px;
       transition: transform .15s, box-shadow .15s;
     }
     .header-logos a { display:block; }
     .header-logos a:hover .header-logo { transform:scale(1.12); box-shadow:0 2px 8px rgba(0,0,0,.5); }
-    .header-actions { display:flex; align-items:center; gap:.75rem; flex-shrink:0; }
+    .header-actions { display:flex; align-items:center; gap:20px; flex-shrink:0; }
+    .header-sep { width:1px; height:28px; background: var(--border); flex-shrink:0; }
 
     /* ── Theme switch ── */
     .theme-switch {
-      display: flex; align-items: center; gap: 7px;
+      display: flex; align-items: center; gap: 8px;
       cursor: pointer; flex-shrink: 0; user-select:none;
+      background: var(--surface); border: 1px solid var(--border-lt);
+      border-radius: 999px; padding: 6px 12px;
     }
     .theme-switch input[type="checkbox"] { display: none; }
     .theme-track {
-      position: relative; width: 44px; height: 24px;
-      background: #3a3a5a; border-radius: 12px; transition: background .25s;
+      position: relative; width: 16px; height: 16px;
       flex-shrink:0;
     }
     .theme-knob {
-      position: absolute; top: 3px; left: 3px;
-      width: 18px; height: 18px; border-radius: 50%;
-      background: #fff; transition: transform .25s;
-      font-size: 11px; line-height: 1;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--accent-blue); transition: background .2s;
+      font-size: 0; line-height: 1;
       display: flex; align-items: center; justify-content: center;
     }
-    .theme-switch input:checked + .theme-track { background: #f0b429; }
-    .theme-switch input:checked + .theme-track .theme-knob { transform: translateX(20px); }
-    .theme-label { font-size: 0.78rem; color: var(--muted); min-width: 40px; }
+    .theme-switch input:checked + .theme-track .theme-knob { background: var(--gold); }
+    .theme-label { font-family: var(--font-display); font-size: 13px; color: var(--text-2); min-width: 40px; }
 
     /* ── Light mode ── */
     body.light {
-      --bg:    #f0f4f8;
-      --card:  #ffffff;
-      --text:  #16213e;
-      --muted: #4a5568;   /* ≥6.6:1 sur blanc — WCAG AA ✓ */
-      --border:#c0ccd8;
+      --bg:        #f0f4f8;
+      --card:      #ffffff;
+      --surface:   #e6edf5;
+      --surface-2: #dde6f2;
+      --text:      #16213e;
+      --text-2:    #33465f;
+      --muted:     #4a5568;   /* ≥6.6:1 sur blanc — WCAG AA ✓ */
+      --border:    #c0ccd8;
+      --border-lt: #b0bccf;
     }
-    body.light #film-tooltip { background:#f8fafd; border-color:#b8c4d8; }
-    body.light #film-tooltip .tt-title { color:#16213e; }
-    body.light #film-tooltip .tt-synopsis { color:#4a5568; }
-    body.light .film-card-poster { background:#d0dcea; }
-    body.light .film-card-rating { background:rgba(0,0,0,.07); color:#16213e; }
-    body.light .film-card-genres { color:#1a55a0; }  /* 7:1 sur blanc ✓ */
+    /* film-tooltip/film-card-poster/genres already theme via CSS vars — no override needed */
     body.light #film-nav .fr-collapse,
     body.light #cinema-nav .fr-collapse,
     body.light #genre-nav .fr-collapse { background:#fff; border-color:#c0ccd8; }
-    body.light #progress-area { background:#dde6f2; }
-    body.light .cinema-map-label { background:#1a4070; }
-    /* Boutons — contraste min 4.5:1 */
-    body.light .cal-btn { border-color:#b0bccf; color:#4a5568; }
-    body.light .cal-btn:hover { border-color:var(--accent); color:var(--accent); }
-    body.light .toggle-btn { border-color:#b0bccf; color:#4a5568; }
-    body.light .toggle-btn:hover { border-color:var(--accent); color:var(--accent); }
-    body.light .view-btn { border-color:#b0bccf; color:#4a5568; background:transparent; }
-    body.light .view-btn.active { background:#c42040; color:#fff; border-color:#c42040; } /* blanc sur #c42040 = 5.9:1 ✓ */
-    /* Boutons jour (inline styles hardcodés en JS) */
-    body.light #day-nav button { color:#4a5568 !important; border-color:#7a8fb0 !important; background:rgba(0,0,0,0.05) !important; }
-    body.light #day-nav button[data-active="1"] { background:#c42040 !important; color:#fff !important; border-color:#c42040 !important; }
-    /* Barre résumé températures (inline styles) */
-    body.light #summary-container > div { background:#dde6f4 !important; }
-    body.light #summary-container div[style] > div { color:#16213e !important; }
+    /* progress-area/cinema-map-label/cal-btn/book-btn/toggle-btn/view-btn already theme via CSS vars — no override needed */
     /* Lignes tableau */
     body.light .row-blue       { background:rgba(52,152,219,.16); }
     body.light .row-green      { background:rgba(46,204,113,.16); }
@@ -636,19 +789,20 @@
       width: 240px;
       border-radius: 8px;
       overflow: hidden;
-      border: 1px solid #3a3a5a;
+      border: 1px solid var(--border-lt);
       box-shadow: 0 4px 20px rgba(0,0,0,.75);
     }
     .cinema-map-label {
-      background: #0f3460;
-      color: #e0e0e0;
+      background: var(--card);
+      color: var(--text);
+      font-family: var(--font-display);
       font-size: 0.75rem;
       font-weight: 600;
       padding: 5px 9px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      border-bottom: 1px solid #3a3a5a;
+      border-bottom: 1px solid var(--border-lt);
     }
     #cinema-map-container { width: 240px; height: 155px; }
     #cinema-map-container .leaflet-attribution-flag { display: none !important; }
@@ -670,7 +824,13 @@
 
 <header>
   <div class="header-left">
-    <h1>🎬 Planificateur Ciné Canicule pour ceux qui vivent sous les toits</h1>
+    <div class="header-monogram"><span>PC</span></div>
+    <div style="min-width:0;">
+      <h1 id="page-h1">Planificateur Ciné Canicule</h1>
+      <div id="meta">Chargement…</div>
+    </div>
+  </div>
+  <div class="header-actions">
     <div class="header-logos">
       <a href="https://www.allocine.fr" target="_blank" rel="noopener" title="Données cinéma : AlloCiné">
         <img src="https://www.allocine.fr/apple-touch-icon.png" alt="AlloCiné" class="header-logo"
@@ -685,38 +845,51 @@
              onerror="this.parentElement.style.display='none'">
       </a>
     </div>
-  </div>
-  <div id="meta">Chargement…</div>
-  <div class="header-actions">
+    <div class="header-sep"></div>
     <label class="theme-switch" title="Basculer sombre / clair">
       <input type="checkbox" id="theme-toggle" onchange="toggleTheme()">
-      <div class="theme-track"><div class="theme-knob" id="theme-knob">🌙</div></div>
+      <div class="theme-track"><div class="theme-knob" id="theme-knob"></div></div>
       <span class="theme-label" id="theme-label">Sombre</span>
     </label>
     <button id="btn-refresh" onclick="doRefresh()">
-      <span id="btn-label">🔄 Actualiser</span>
+      <span id="btn-label">⟳ Actualiser</span>
     </button>
   </div>
 </header>
-<div id="progress-area" style="display:none;width:100%;padding:8px 24px;background:#0f3460;">
+<div id="progress-area" style="display:none;width:100%;padding:8px 24px;background:var(--card);">
   <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-    <span id="progress-text" style="font-size:0.8rem;color:#aaa;"></span>
-    <span id="progress-pct" style="font-size:0.8rem;color:#aaa;"></span>
+    <span id="progress-text" style="font-size:0.8rem;color:var(--muted);"></span>
+    <span id="progress-pct" style="font-size:0.8rem;color:var(--muted);"></span>
   </div>
-  <div style="background:#1a1a2e;border-radius:4px;height:8px;overflow:hidden;">
-    <div id="progress-bar" style="height:100%;background:#e94560;width:0%;transition:width 0.3s ease;"></div>
+  <div style="background:var(--bg);border-radius:4px;height:8px;overflow:hidden;">
+    <div id="progress-bar" style="height:100%;background:var(--accent);width:0%;transition:width 0.3s ease;"></div>
   </div>
 </div>
 
 <main>
-  <aside>
-    <!-- View switch -->
-    <h2>Vue</h2>
-    <div id="view-toggle">
-      <button class="view-btn active" id="btn-jour"   onclick="switchView('jour')">Par jour</button>
-      <button class="view-btn"        id="btn-cinema" onclick="switchView('cinema')">Par cinéma</button>
-      <button class="view-btn"        id="btn-film"   onclick="switchView('film')">Par film</button>
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <h2 style="margin:0;">Filtres</h2>
+      <button id="sidebar-toggle" class="toggle-btn" onclick="toggleSidebar()">Replier ▲</button>
     </div>
+    <div id="sidebar-content">
+    <!-- View switch -->
+    <div class="filter-group">
+      <h2>Vue</h2>
+      <div id="view-toggle">
+        <button class="view-btn active" id="btn-film"   onclick="switchView('film')">Par film</button>
+        <button class="view-btn"        id="btn-jour"   onclick="switchView('jour')">Par jour</button>
+        <button class="view-btn"        id="btn-cinema" onclick="switchView('cinema')">Par cinéma</button>
+      </div>
+    </div>
+
+    <!-- Mode canicule — isolated switch -->
+    <label class="heat-toggle">
+      <span class="heat-label">Mode canicule</span>
+      <input type="checkbox" id="canicule-mode" checked
+             onchange="caniculeMode=this.checked;updatePageTitle();applyFilters()">
+      <span class="heat-track"><span class="heat-knob"></span></span>
+    </label>
 
     <!-- Cinema filter -->
     <div class="filter-group">
@@ -781,29 +954,27 @@
     <!-- Group by film toggle + advanced info -->
     <div class="filter-group">
       <h2>Options</h2>
-      <label style="display:flex;align-items:center;gap:.45rem;font-size:0.82rem;color:var(--text);cursor:pointer;">
+      <label>
         <input type="checkbox" id="group-by-film" checked
-               onchange="groupByFilm=this.checked;applyFilters()"
-               style="accent-color:var(--accent);width:14px;height:14px;flex-shrink:0;">
+               onchange="groupByFilm=this.checked;applyFilters()">
         Regrouper par film
       </label>
-      <label style="display:flex;align-items:center;gap:.45rem;font-size:0.82rem;color:var(--text);cursor:pointer;margin-top:.35rem;">
+      <label>
         <input type="checkbox" id="show-advanced"
-               onchange="showAdvancedInfo=this.checked;applyFilters()"
-               style="accent-color:var(--accent);width:14px;height:14px;flex-shrink:0;">
+               onchange="showAdvancedInfo=this.checked;applyFilters()">
         Infos avancées
       </label>
-      <label style="display:flex;align-items:center;gap:.45rem;font-size:0.82rem;color:var(--text);cursor:pointer;margin-top:.35rem;">
+      <label>
         <input type="checkbox" id="only-all-ages"
-               onchange="onlyAllAges=this.checked;applyFilters()"
-               style="accent-color:var(--accent);width:14px;height:14px;flex-shrink:0;">
+               onchange="onlyAllAges=this.checked;applyFilters()">
         Films tout public uniquement
       </label>
     </div>
 
-    <button class="toggle-btn" onclick="resetFilters()" style="width:100%;margin-top:8px;background:#2a1a2e;border-color:#e94560;color:#e94560;">
+    <button class="toggle-btn" onclick="resetFilters()" style="width:100%;margin-top:auto;background:none;border:1px solid color-mix(in oklch, var(--accent) 50%, transparent);color:var(--accent);padding:10px;border-radius:10px;font-weight:600;font-size:13px;">
       Réinitialiser les choix
     </button>
+    </div>
 
   </aside>
 
@@ -820,10 +991,14 @@
 <script>
   let DATA = null;
 
+  // Static hosting (GitHub Pages) has no Flask backend — /refresh and /progress
+  // don't exist there; data is refreshed by the scheduled "Scrape Data" workflow instead.
+  const IS_STATIC_HOST = location.hostname.endsWith('github.io');
+
   /* ────────────────────────────────────────────
      State
   ──────────────────────────────────────────── */
-  let currentView = 'jour';
+  let currentView = 'film';
   let selectedCinemas = new Set();
   let allCinemas = [];
   let selectedFilms = new Set();
@@ -834,6 +1009,19 @@
   let groupByFilm = true;
   let showAdvancedInfo = false;
   let onlyAllAges = false;
+  let sortState = { key: null, dir: 1 };  // key: cinema|date|heure|duree|film|temp
+  let caniculeMode = true;
+
+  /* ────────────────────────────────────────────
+     Page title (toggled by "Mode canicule")
+  ──────────────────────────────────────────── */
+  function updatePageTitle() {
+    document.title = caniculeMode ? 'Planificateur Ciné Canicule 🎬🌡️' : 'Planificateur Ciné 🎬';
+    const h1 = document.getElementById('page-h1');
+    if (h1) {
+      h1.textContent = caniculeMode ? 'Planificateur Ciné Canicule' : 'Planificateur Ciné';
+    }
+  }
 
   /* ────────────────────────────────────────────
      Temperature helpers
@@ -853,6 +1041,7 @@
   }
 
   function tempBadge(t) {
+    if (!caniculeMode) return '';
     if (t === null || t === undefined) return '<span style="color:#666">—</span>';
     const color = tempColor(t);
     return `<span class="temp-badge" style="background:${color}">${t.toFixed(1)} °C</span>`;
@@ -860,11 +1049,13 @@
 
   /* ────────────────────────────────────────────
      Filter: only keep dates with at least one temp
+     (bypassed entirely when caniculeMode is off — every day with a
+     session is then relevant, temp data or not)
   ──────────────────────────────────────────── */
   function getDatesWithTemperatures(sessions) {
     const datesWithTemp = new Set();
     sessions.forEach(s => {
-      if (s.temperature !== null && s.temperature !== undefined) {
+      if (!caniculeMode || (s.temperature !== null && s.temperature !== undefined)) {
         datesWithTemp.add(s.date);
       }
     });
@@ -876,6 +1067,7 @@
   ──────────────────────────────────────────── */
   function getFilteredSessions() {
     if (!DATA) return [];
+    const cutoff = Date.now() - 15 * 60 * 1000;
     return DATA.sessions.filter(s => {
       if (!selectedCinemas.has(s.cinema)) return false;
       if (selectedFilms.size < allFilms.length && !selectedFilms.has(s.film)) return false;
@@ -885,27 +1077,31 @@
         if (!sGenres.some(g => selectedGenres.has(g))) return false;
       }
       if (onlyAllAges && s.certificate !== 'Tout public' && s.certificate !== 'Tous publics') return false;
+      const startsAt = new Date(`${s.date}T${s.heure}:00`).getTime();
+      if (!Number.isNaN(startsAt) && startsAt < cutoff) return false;
       return true;
     });
   }
 
+  // Neutral in-body pill — only for age-neutral certificates
   function certBadge(cert) {
     if (!cert) return '';
-    const colors = {
-      'Tout public':  '#27ae60',
-      'Tous publics': '#27ae60',
-    };
+    if (!/^tous?\s*publics?/i.test(cert)) return '';
+    return `<span class="cert-badge">Tout public</span>`;
+  }
+
+  // Age-restricted certificates surface as a poster overlay instead ("-12", "-16"…)
+  function certWarning(cert) {
+    if (!cert || /^tous?\s*publics?/i.test(cert)) return null;
     const match = cert.match(/(\d+)/);
-    const age = match ? parseInt(match[1]) : null;
-    const color = colors[cert] ?? (age >= 18 ? '#e74c3c' : age >= 16 ? '#e67e22' : age >= 12 ? '#f39c12' : '#888');
-    const label = colors[cert] ? 'Tout public' : (age ? `-${age}` : cert);
-    return `<span class="cert-badge" style="background:${color}" title="${escHtml(cert)}">${label}</span>`;
+    return match ? `-${match[1]}` : null;
   }
 
   /* ────────────────────────────────────────────
      Row builder helpers
   ──────────────────────────────────────────── */
   function rowClass(t) {
+    if (!caniculeMode) return '';
     return 'row-' + tempClass(t);
   }
 
@@ -1136,7 +1332,7 @@
     return '<th>Réalisateurice</th><th>Public</th><th>Presse</th><th>Genres</th><th>Acteurices</th>';
   }
 
-  // Vue A row: Cinema | Heure | Durée | Film | [avancé] | Temp | 📅
+  // Vue A row: Cinema | Heure | Durée | Film | [avancé] | Temp | Réserver | 📅
   function buildRowJour(s) {
     const cls = rowClass(s.temperature);
     return `<tr class="${cls}">
@@ -1146,11 +1342,12 @@
       <td>${filmCell(s)}</td>
       ${advancedCells(s)}
       <td>${tempBadge(s.temperature)}</td>
+      <td>${bookBtn(s)}</td>
       <td>${calBtn(s)}</td>
     </tr>`;
   }
 
-  // Vue B row: Date | Heure | Durée | Film | [avancé] | Temp | 📅
+  // Vue B row: Date | Heure | Durée | Film | [avancé] | Temp | Réserver | 📅
   function buildRowCinema(s) {
     const cls = rowClass(s.temperature);
     const dateStr = new Date(s.date + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'short', day:'numeric', month:'short'});
@@ -1161,8 +1358,77 @@
       <td>${filmCell(s)}</td>
       ${advancedCells(s)}
       <td>${tempBadge(s.temperature)}</td>
+      <td>${bookBtn(s)}</td>
       <td>${calBtn(s)}</td>
     </tr>`;
+  }
+
+  /* ────────────────────────────────────────────
+     Column sorting (click table headers)
+  ──────────────────────────────────────────── */
+  function parseDurationMinutes(dur) {
+    if (!dur) return 0;
+    const h = dur.match(/(\d+)\s*h/i);
+    const m = dur.match(/(\d+)\s*min/i);
+    return (h ? parseInt(h[1], 10) * 60 : 0) + (m ? parseInt(m[1], 10) : 0);
+  }
+
+  function toggleSort(key) {
+    if (sortState.key === key) {
+      sortState.dir *= -1;
+    } else {
+      sortState.key = key;
+      sortState.dir = 1;
+    }
+    applyFilters();
+  }
+
+  function sortIndicator(key) {
+    if (sortState.key !== key) return '';
+    return sortState.dir === 1 ? ' ▲' : ' ▼';
+  }
+
+  function sortableTh(label, key) {
+    return `<th style="cursor:pointer;user-select:none;" onclick="toggleSort('${key}')" title="Trier">${label}${sortIndicator(key)}</th>`;
+  }
+
+  // Comparator for flat session rows (buildRowJour / buildRowCinema)
+  function sessionComparator(key) {
+    switch (key) {
+      case 'cinema': return (a, b) => a.cinema.localeCompare(b.cinema, 'fr');
+      case 'date':   return (a, b) => a.date.localeCompare(b.date);
+      case 'heure':  return (a, b) => a.heure.localeCompare(b.heure);
+      case 'duree':  return (a, b) => parseDurationMinutes(a.duration) - parseDurationMinutes(b.duration);
+      case 'film':   return (a, b) => a.film.localeCompare(b.film, 'fr');
+      case 'temp':   return (a, b) => (a.temperature ?? -Infinity) - (b.temperature ?? -Infinity);
+      default:       return () => 0;
+    }
+  }
+
+  // Comparator for grouped rows (buildGroupedRowJour / buildGroupedRowCinema)
+  function groupComparator(key) {
+    switch (key) {
+      case 'cinema': return (a, b) => a.cinema.localeCompare(b.cinema, 'fr');
+      case 'date':   return (a, b) => a.date.localeCompare(b.date);
+      case 'film':   return (a, b) => a.film.localeCompare(b.film, 'fr');
+      case 'duree':  return (a, b) => parseDurationMinutes(a.sessions[0].duration) - parseDurationMinutes(b.sessions[0].duration);
+      case 'temp':   return (a, b) => (maxTemp(a.sessions) ?? -Infinity) - (maxTemp(b.sessions) ?? -Infinity);
+      default:       return () => 0;
+    }
+  }
+
+  function seancesTh() {
+    return sortableTh(caniculeMode ? 'Séances + Température extérieure' : 'Séances', 'temp');
+  }
+
+  function tempTh() {
+    return caniculeMode ? sortableTh('🌡️', 'temp') : '<th></th>';
+  }
+
+  function applySort(list, comparatorFn, defaultCmp) {
+    const cmp = sortState.key ? comparatorFn(sortState.key) : defaultCmp;
+    const dir = sortState.key ? sortState.dir : 1;
+    return list.slice().sort((a, b) => dir * cmp(a, b));
   }
 
   function escHtml(str) {
@@ -1182,13 +1448,26 @@
   function sessionBadge(s) {
     const time = escHtml(s.heure);
     let badge;
-    if (s.temperature === null || s.temperature === undefined) {
+    if (!caniculeMode || s.temperature === null || s.temperature === undefined) {
       badge = `<span style="white-space:nowrap;font-size:0.82rem;color:#aaa">${time}</span>`;
     } else {
       const color = tempColor(s.temperature);
       badge = `<span style="white-space:nowrap;font-size:0.82rem;">${time}&nbsp;<span class="temp-badge" style="background:${color}">${s.temperature.toFixed(1)}&nbsp;°C</span></span>`;
     }
-    return `<span style="white-space:nowrap;display:inline-flex;align-items:center;gap:3px;">${badge}${calBtn(s)}</span>`;
+    return `<span style="white-space:nowrap;display:inline-flex;align-items:center;gap:3px;">${badge}${bookBtn(s)}${calBtn(s)}</span>`;
+  }
+
+  // Film-card session pill: bold time + discreet temp + attached Réserver/calendar ghost buttons
+  function sessionPill(s) {
+    const time = escHtml(s.heure);
+    const tempHtml = (caniculeMode && s.temperature !== null && s.temperature !== undefined)
+      ? `<span class="temp">${s.temperature.toFixed(0)}°</span>`
+      : '';
+    return `<div class="session-pill">
+      <span class="time">${time}</span>
+      ${tempHtml}
+      ${bookBtn(s)}${calBtn(s)}
+    </div>`;
   }
 
   function seancesCell(sessions) {
@@ -1274,34 +1553,55 @@
   }
 
   /* ────────────────────────────────────────────
-     Temperature summary bar (Vue A only)
+     Booking button
+  ──────────────────────────────────────────── */
+  function bookingLogoDomain(s) {
+    try {
+      return new URL(s.booking_url || s.cinema_url).hostname;
+    } catch {
+      return 'allocine.fr';
+    }
+  }
+
+  function bookBtn(s) {
+    const hasBooking = !!s.booking_url;
+    const url    = hasBooking ? s.booking_url : (s.cinema_url || 'https://www.allocine.fr/');
+    const label  = hasBooking ? 'Réserver' : 'Vérifier';
+    const domain = bookingLogoDomain(s);
+    const logo   = `<img src="https://www.google.com/s2/favicons?sz=32&domain=${encodeURIComponent(domain)}" alt="" onerror="this.style.display='none'">`;
+    return `<a href="${escHtml(url)}" target="_blank" rel="noopener" class="book-btn" title="${label} une place pour cette séance chez ${escHtml(s.cinema)}">${logo}${label}</a>`;
+  }
+
+  /* ────────────────────────────────────────────
+     Day selector — single merged row of "day + temp range" pills
+     (replaces the old duplicated temp-strip + date-tabs pair)
   ──────────────────────────────────────────── */
   function renderTempSummary(sessions) {
     const dailyTemps = DATA.daily_temps || {};
-    // Only show dates that have at least one session in the filtered set
-    const datesWithSession = new Set(sessions.map(s => s.date));
-    const dates = Object.keys(dailyTemps).filter(d => datesWithSession.has(d)).sort();
+    const dates = [...new Set(sessions.map(s => s.date))].sort();
     if (!dates.length) return '';
 
+    const clickable = (currentView === 'jour' || currentView === 'film');
+
     const items = dates.map(date => {
-      const dt = dailyTemps[date];
-      if (!dt) return '';
-      const min = Math.round(dt.min);
-      const max = Math.round(dt.max);
+      const dt = caniculeMode ? dailyTemps[date] : null;
       const d = new Date(date + 'T12:00:00');
       const label = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
-      const borderColor = tempColor(max) || '#8888aa';
-      const isActive = (currentView === 'jour' || currentView === 'film') && date === selectedDay;
-      const activeBg = isActive ? 'background:rgba(233,69,96,0.15);' : '';
-      const clickAttr = (currentView === 'jour' || currentView === 'film') ? `onclick="selectDay('${date}')"` : '';
-      const cursor = (currentView === 'jour' || currentView === 'film') ? 'cursor:pointer;' : '';
-      return `<div ${clickAttr} style="text-align:center;padding:6px 12px;border-radius:6px;border:1px solid ${borderColor};min-width:72px;${cursor}transition:background 0.15s;${activeBg}">
-          <div style="font-size:0.72rem;color:#aaa;margin-bottom:3px;">${label}</div>
-          <div style="font-size:0.85rem;color:#e0e0e0;">${min}°–${max}°</div>
-        </div>`;
-    }).filter(Boolean).join('');
+      const isActive = clickable && date === selectedDay;
+      const clickAttr = clickable ? `onclick="selectDay('${date}')"` : '';
+      const border = isActive ? 'var(--accent)' : 'var(--border)';
+      const bg     = isActive ? 'var(--accent)' : 'var(--card)';
+      const color  = isActive ? 'var(--accent-on)' : 'var(--text-2)';
+      const rangeHtml = dt
+        ? `<span style="font-family:var(--font-mono);font-size:12px;opacity:.75;">${Math.round(dt.min)}°–${Math.round(dt.max)}°</span>`
+        : '';
+      return `<button ${clickAttr} style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 14px;border-radius:10px;cursor:${clickable ? 'pointer' : 'default'};flex-shrink:0;border:1px solid ${border};background:${bg};color:${color};font-family:var(--font-display);transition:background .15s,border-color .15s;">
+          <span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">${label}</span>
+          ${rangeHtml}
+        </button>`;
+    }).join('');
 
-    return `<div style="display:flex;gap:8px;overflow-x:auto;padding:10px 24px;background:#0f3460;scrollbar-width:thin;scrollbar-color:#3a3a5a transparent;">${items}</div>`;
+    return `<div id="day-nav" style="display:flex;gap:10px;overflow-x:auto;padding:16px 28px;border-bottom:1px solid var(--border);">${items}</div>`;
   }
 
   /* ────────────────────────────────────────────
@@ -1342,20 +1642,6 @@
       selectedDay = dates[0];
     }
 
-    // Build horizontal day nav
-    const navHtml = dates.map(date => {
-      const d = new Date(date + 'T12:00:00');
-      const dayLabel = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
-      const isActive = date === selectedDay;
-      return `<button data-active="${isActive ? '1' : '0'}" onclick="selectDay('${date}')" style="
-          white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid;
-          cursor:pointer;font-size:0.82rem;transition:all 0.2s;
-          ${isActive
-            ? 'background:#e94560;color:#fff;border-color:#e94560;'
-            : 'background:rgba(255,255,255,0.05);color:#ccc;border-color:#6060a0;'}
-        ">${dayLabel}</button>`;
-    }).join('');
-
     // Show only selected day's sessions
     const rawDay = (groups[selectedDay] || []);
     let rowsHtml, theadHtml;
@@ -1367,23 +1653,26 @@
         if (!grouped.has(key)) grouped.set(key, { cinema: s.cinema, film: s.film, version: s.version, sessions: [] });
         grouped.get(key).sessions.push(s);
       });
-      const groupList = [...grouped.values()].sort((a, b) =>
-        a.cinema.localeCompare(b.cinema) || a.film.localeCompare(b.film) || (a.version || '').localeCompare(b.version || '')
+      const groupList = applySort(
+        [...grouped.values()], groupComparator,
+        (a, b) => a.cinema.localeCompare(b.cinema) || a.film.localeCompare(b.film) || (a.version || '').localeCompare(b.version || '')
       );
       rowsHtml  = groupList.map(buildGroupedRowJour).join('');
-      theadHtml = `<tr><th>Cinéma</th><th>Film</th><th>Durée</th>${advancedHeaders()}<th>Séances + Température extérieure</th></tr>`;
+      theadHtml = `<tr>${sortableTh('Cinéma', 'cinema')}${sortableTh('Film', 'film')}${sortableTh('Durée', 'duree')}${advancedHeaders()}${seancesTh()}</tr>`;
     } else {
-      const sorted = rawDay.slice().sort((a, b) => a.cinema.localeCompare(b.cinema) || a.heure.localeCompare(b.heure));
+      const sorted = applySort(
+        rawDay, sessionComparator,
+        (a, b) => a.cinema.localeCompare(b.cinema) || a.heure.localeCompare(b.heure)
+      );
       rowsHtml  = sorted.map(buildRowJour).join('');
-      theadHtml = `<tr><th>Cinéma</th><th>Heure</th><th>Durée</th><th>Film</th>${advancedHeaders()}<th>🌡️</th><th></th></tr>`;
+      theadHtml = `<tr>${sortableTh('Cinéma', 'cinema')}${sortableTh('Heure', 'heure')}${sortableTh('Durée', 'duree')}${sortableTh('Film', 'film')}${advancedHeaders()}${tempTh()}<th></th><th></th></tr>`;
     }
 
     const d = new Date(selectedDay + 'T12:00:00');
     const fullLabel = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
     const capitalized = fullLabel.charAt(0).toUpperCase() + fullLabel.slice(1);
 
-    return `<div id="day-nav">${navHtml}</div>
-      <div class="group">
+    return `<div class="group">
         <div class="group-header">${capitalized}</div>
         <table>
           <thead>${theadHtml}</thead>
@@ -1414,18 +1703,19 @@
           if (!grouped.has(key)) grouped.set(key, { film: s.film, date: s.date, version: s.version, sessions: [] });
           grouped.get(key).sessions.push(s);
         });
-        const groupList = [...grouped.values()].sort((a, b) =>
-          a.date.localeCompare(b.date) || a.film.localeCompare(b.film) || (a.version || '').localeCompare(b.version || '')
+        const groupList = applySort(
+          [...grouped.values()], groupComparator,
+          (a, b) => a.date.localeCompare(b.date) || a.film.localeCompare(b.film) || (a.version || '').localeCompare(b.version || '')
         );
         rowsHtml  = groupList.map(buildGroupedRowCinema).join('');
-        theadHtml = `<tr><th>Date</th><th>Film</th><th>Durée</th>${advancedHeaders()}<th>Séances + Température extérieure</th></tr>`;
+        theadHtml = `<tr>${sortableTh('Date', 'date')}${sortableTh('Film', 'film')}${sortableTh('Durée', 'duree')}${advancedHeaders()}${seancesTh()}</tr>`;
       } else {
-        const sorted = groups[cinema].slice().sort((a, b) => {
-          const d = a.date.localeCompare(b.date);
-          return d !== 0 ? d : a.heure.localeCompare(b.heure);
-        });
+        const sorted = applySort(
+          groups[cinema], sessionComparator,
+          (a, b) => a.date.localeCompare(b.date) || a.heure.localeCompare(b.heure)
+        );
         rowsHtml  = sorted.map(buildRowCinema).join('');
-        theadHtml = `<tr><th>Date</th><th>Heure</th><th>Durée</th><th>Film</th>${advancedHeaders()}<th>🌡️</th><th></th></tr>`;
+        theadHtml = `<tr>${sortableTh('Date', 'date')}${sortableTh('Heure', 'heure')}${sortableTh('Durée', 'duree')}${sortableTh('Film', 'film')}${advancedHeaders()}${tempTh()}<th></th><th></th></tr>`;
       }
       return `<div class="group">
         <div class="group-header cinema-hover" data-cinema="${escHtml(cinema)}">${escHtml(cinema)}</div>
@@ -1455,19 +1745,6 @@
 
     if (!selectedDay || !dates.includes(selectedDay)) selectedDay = dates[0];
 
-    const navHtml = dates.map(date => {
-      const d = new Date(date + 'T12:00:00');
-      const dayLabel = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
-      const isActive = date === selectedDay;
-      return `<button data-active="${isActive ? '1' : '0'}" onclick="selectDay('${date}')" style="
-          white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid;
-          cursor:pointer;font-size:0.82rem;transition:all 0.2s;
-          ${isActive
-            ? 'background:#e94560;color:#fff;border-color:#e94560;'
-            : 'background:rgba(255,255,255,0.05);color:#ccc;border-color:#6060a0;'}
-        ">${dayLabel}</button>`;
-    }).join('');
-
     const dObj = new Date(selectedDay + 'T12:00:00');
     const fullLabel = dObj.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
     const dayHeader = fullLabel.charAt(0).toUpperCase() + fullLabel.slice(1);
@@ -1492,12 +1769,18 @@
         ? `<img src="${escHtml(rep.poster_url)}" alt="${escHtml(rep.film)}" loading="lazy">`
         : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:3rem;">🎬</div>`;
 
-      const userR  = rep.user_rating  != null ? `<span class="film-card-rating">👥 ${Number(rep.user_rating).toFixed(1)}</span>`  : '';
-      const pressR = rep.press_rating != null ? `<span class="film-card-rating">📰 ${Number(rep.press_rating).toFixed(1)}</span>` : '';
-      const dur    = rep.duration ? `<span>${escHtml(rep.duration)}</span>` : '';
-      const genres = (rep.genres  || []).join(', ');
-      const dirHtml   = rep.director            ? `<div class="film-card-crew">🎬 ${escHtml(rep.director)}</div>` : '';
-      const actHtml   = rep.actors && rep.actors.length ? `<div class="film-card-crew">🎭 ${escHtml(rep.actors.join(', '))}</div>` : '';
+      const warning = certWarning(rep.certificate);
+      const warningHtml = warning ? `<span class="film-card-warning">${escHtml(warning)}</span>` : '';
+
+      const sep      = `<span class="sep">·</span>`;
+      const durHtml  = rep.duration ? `<span>${escHtml(rep.duration)}</span>` : '';
+      const userR    = rep.user_rating  != null ? `<span class="rating-public">★ ${Number(rep.user_rating).toFixed(1)}</span>`  : '';
+      const pressR   = rep.press_rating != null ? `<span class="rating-press">✎ ${Number(rep.press_rating).toFixed(1)}</span>` : '';
+      const metaParts = [durHtml, userR, pressR].filter(Boolean).join(sep);
+      const genres = (rep.genres || []).join(', ');
+
+      const creditParts = [rep.director, rep.actors && rep.actors.length ? rep.actors.join(', ') : ''].filter(Boolean);
+      const creditsHtml = creditParts.length ? `<div class="film-card-crew">${escHtml(creditParts.join(' — '))}</div>` : '';
       const synHtml   = rep.synopsis ? `<p class="film-card-synopsis">${escHtml(rep.synopsis)}</p>` : '';
 
       const titleHtml = rep.film_url
@@ -1511,25 +1794,25 @@
           const sorted = sessions.slice().sort((a, b) => a.heure.localeCompare(b.heure));
           return `<div>
             <div class="film-card-cinema-name cinema-hover" data-cinema="${escHtml(cinema)}">${escHtml(cinema)}${vLabel}</div>
-            <div class="film-card-session-badges">${sorted.map(sessionBadge).join('')}</div>
+            <div class="film-card-session-badges">${sorted.map(sessionPill).join('')}</div>
           </div>`;
         }).join('');
 
       return `<div class="film-card">
-        <div class="film-card-poster">${posterHtml}</div>
+        <div class="film-card-poster">${posterHtml}${warningHtml}</div>
         <div class="film-card-body">
           <h3 class="film-card-title">${titleHtml}</h3>
-          <div class="film-card-meta">${dur}${userR}${pressR}${certBadge(rep.certificate)}</div>
+          <div class="film-card-meta">${metaParts}</div>
           ${genres ? `<div class="film-card-genres">${escHtml(genres)}</div>` : ''}
-          ${dirHtml}${actHtml}
+          ${certBadge(rep.certificate)}
+          ${creditsHtml}
           ${synHtml}
           <div class="film-card-sessions">${sessionsHtml}</div>
         </div>
       </div>`;
     }).join('');
 
-    return `<div id="day-nav">${navHtml}</div>
-      <div class="film-card-day-header">${dayHeader}</div>
+    return `<div class="film-card-day-header">${dayHeader} <span class="film-card-day-count">${filmList.length} film${filmList.length !== 1 ? 's' : ''} à l'affiche</span></div>
       <div id="film-cards-container">${cardsHtml || '<div style="padding:2rem;text-align:center;color:var(--muted)">Aucun film ce jour.</div>'}</div>`;
   }
 
@@ -1663,14 +1946,24 @@
      Init
   ──────────────────────────────────────────── */
   function init() {
+    // Static hosting has no /refresh endpoint — data updates via the scheduled scrape workflow instead
+    if (IS_STATIC_HOST) {
+      const btn = document.getElementById('btn-refresh');
+      btn.disabled = true;
+      btn.title = 'Les données sont mises à jour automatiquement (2×/jour)';
+      document.getElementById('btn-label').textContent = '⟳ Auto (2×/jour)';
+    }
+
     // Meta info
     const metaEl = document.getElementById('meta');
     if (DATA.updated_at) {
       const dt = new Date(DATA.updated_at).toLocaleString('fr-FR');
       const n  = DATA.sessions.length;
-      metaEl.textContent = `Mis à jour : ${dt} — ${n} séance${n !== 1 ? 's' : ''}`;
+      metaEl.textContent = `${n} séance${n !== 1 ? 's' : ''} · maj ${dt}`;
     } else {
-      metaEl.textContent = 'Aucune donnée — cliquez sur Actualiser';
+      metaEl.textContent = IS_STATIC_HOST
+        ? 'Aucune donnée disponible pour le moment.'
+        : 'Aucune donnée — cliquez sur Actualiser';
     }
 
     // Build cinema dropdown
@@ -1812,6 +2105,20 @@
     applyFilters();
   }
 
+  /* ────────────────────────────────────────────
+     Sidebar collapse (déployé par défaut)
+  ──────────────────────────────────────────── */
+  let sidebarExpanded = true;
+
+  function toggleSidebar() {
+    sidebarExpanded = !sidebarExpanded;
+    const sidebar = document.getElementById('sidebar');
+    const btn     = document.getElementById('sidebar-toggle');
+    sidebar.classList.toggle('collapsed', !sidebarExpanded);
+    btn.textContent = sidebarExpanded ? 'Replier ▲' : '▶';
+    btn.title = sidebarExpanded ? '' : 'Déployer les filtres';
+  }
+
   function resetFilters() {
     selectAllCinemas();
     selectAllFilms();
@@ -1822,6 +2129,9 @@
     document.getElementById('show-advanced').checked = false;
     onlyAllAges = false;
     document.getElementById('only-all-ages').checked = false;
+    caniculeMode = true;
+    document.getElementById('canicule-mode').checked = true;
+    updatePageTitle();
     applyFilters();
   }
 
@@ -1945,7 +2255,7 @@
     document.getElementById('theme-label').textContent = 'Clair';
   }
 
-  fetch('/sessions.json')
+  fetch('sessions.json')
     .then(r => r.json())
     .then(data => {
       DATA = data;

@@ -71,6 +71,25 @@ def _fetch_cinema_ids():
         pass
     return _FALLBACK_CINEMA_IDS
 
+def _extract_booking_url(showtime):
+    """Pull a ticketing URL out of a raw showtime's data.ticketing list.
+
+    Prefers the "default" provider (falls back to any provider with a URL);
+    returns None when the theater has no online ticketing partner.
+    """
+    ticketing = ((showtime.get("data") or {}).get("ticketing")) or []
+    fallback = None
+    for entry in ticketing:
+        urls = entry.get("urls") or []
+        if not urls:
+            continue
+        if entry.get("provider") == "default":
+            return urls[0]
+        if fallback is None:
+            fallback = urls[0]
+    return fallback
+
+
 # Map allocineAPI diffusionVersion values to display labels
 _VERSION_MAP = {
     "DUBBED": "VF",
@@ -131,6 +150,7 @@ def _api_to_sessions(api_result, cinema_name, date_str):
                 "heure": heure,
                 "version": version,
                 "temperature": None,
+                "booking_url": showtime.get("booking_url"),
             })
     return sessions
 
@@ -243,6 +263,7 @@ def _get_showtime_enriched(api_instance, cinema_id, date_str):
                         showtimes.append({
                             "startsAt": showtime.get("startsAt", ""),
                             "diffusionVersion": showtime.get("diffusionVersion", ""),
+                            "booking_url": _extract_booking_url(showtime),
                         })
 
             formatted_data.append({
@@ -271,17 +292,21 @@ def scrape_cinema_day(cinema_name, cinema_id, date_str, api=None):
         api = _AllocineAPIWithHeaders()
     try:
         result = _get_showtime_enriched(api, cinema_id, date_str)
-        return _api_to_sessions(result, cinema_name, date_str)
+        sessions = _api_to_sessions(result, cinema_name, date_str)
+        cinema_url = f"https://www.allocine.fr/salle/cinema/{cinema_id}/"
+        for s in sessions:
+            s["cinema_url"] = cinema_url
+        return sessions
     except Exception:
         return []
 
 
 def scrape_all(progress_callback=None):
-    """Fetch sessions for all cinemas in Lyon and Villeurbanne over 21 days.
+    """Fetch sessions for all cinemas in Lyon and Villeurbanne over 15 days.
 
     Cinema list is discovered dynamically from AlloCiné at call time.
-    5 cinemas scraped in parallel; each cinema's 21 days run sequentially
-    with a 0.2s delay. Reduces total time from ~3 min to ~35-45 seconds.
+    5 cinemas scraped in parallel; each cinema's 15 days run sequentially
+    with a 0.2s delay.
 
     progress_callback(current, total, cinema_name) called for each request.
     Returns flat list of session dicts without temperatures.
@@ -289,7 +314,7 @@ def scrape_all(progress_callback=None):
     cinema_ids = _fetch_cinema_ids()
 
     today = datetime.now().date()
-    dates = [(today + timedelta(days=i)).isoformat() for i in range(21)]
+    dates = [(today + timedelta(days=i)).isoformat() for i in range(15)]
 
     total = len(cinema_ids) * len(dates)
     lock = threading.Lock()

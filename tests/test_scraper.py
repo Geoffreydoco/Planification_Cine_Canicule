@@ -254,7 +254,7 @@ class TestScrapeCinemaDay:
 # ---------------------------------------------------------------------------
 
 class TestScrapeAll:
-    """Tests for scrape_all — dynamic cinema list × 21 dates."""
+    """Tests for scrape_all — dynamic cinema list × 15 dates."""
 
     def test_returns_list(self):
         with patch("scraper._fetch_cinema_ids", return_value=TEST_CINEMA_IDS), \
@@ -271,7 +271,7 @@ class TestScrapeAll:
              patch("scraper.time.sleep"), \
              patch("scraper._get_showtime_enriched", return_value=[]) as mock_enrich:
             scrape_all()
-        assert mock_enrich.call_count == len(TEST_CINEMA_IDS) * 21
+        assert mock_enrich.call_count == len(TEST_CINEMA_IDS) * 15
 
     def test_creates_one_api_instance_per_cinema(self):
         """scrape_all doit créer une instance _AllocineAPIWithHeaders par cinéma (workers parallèles)."""
@@ -295,7 +295,7 @@ class TestScrapeAll:
              patch("scraper.time.sleep"), \
              patch("scraper._get_showtime_enriched", return_value=[one_session]):
             result = scrape_all()
-        assert len(result) == len(TEST_CINEMA_IDS) * 21
+        assert len(result) == len(TEST_CINEMA_IDS) * 15
 
     def test_progress_callback_called(self):
         """progress_callback doit être appelé pour chaque combinaison cinéma/date."""
@@ -305,13 +305,13 @@ class TestScrapeAll:
              patch("scraper.time.sleep"), \
              patch("scraper._get_showtime_enriched", return_value=[]):
             scrape_all(progress_callback=lambda cur, tot, name: calls.append((cur, tot, name)))
-        assert len(calls) == len(TEST_CINEMA_IDS) * 21
+        assert len(calls) == len(TEST_CINEMA_IDS) * 15
         assert calls[0][0] == 1
-        assert calls[-1][0] == len(TEST_CINEMA_IDS) * 21
-        assert calls[0][1] == len(TEST_CINEMA_IDS) * 21
+        assert calls[-1][0] == len(TEST_CINEMA_IDS) * 15
+        assert calls[0][1] == len(TEST_CINEMA_IDS) * 15
 
-    def test_covers_21_dates(self):
-        """Les dates scrappées doivent couvrir 21 jours distincts à partir d'aujourd'hui."""
+    def test_covers_15_dates(self):
+        """Les dates scrappées doivent couvrir 15 jours distincts à partir d'aujourd'hui."""
         from datetime import datetime, timedelta
         scraped_dates = []
 
@@ -326,10 +326,10 @@ class TestScrapeAll:
             scrape_all()
 
         unique_dates = sorted(set(scraped_dates))
-        assert len(unique_dates) == 21
+        assert len(unique_dates) == 15
         today = datetime.now().date().isoformat()
         assert unique_dates[0] == today
-        last_expected = (datetime.now().date() + timedelta(days=20)).isoformat()
+        last_expected = (datetime.now().date() + timedelta(days=14)).isoformat()
         assert unique_dates[-1] == last_expected
 
     def test_continues_on_api_error(self):
@@ -350,4 +350,4 @@ class TestScrapeAll:
             result = scrape_all()
 
         assert isinstance(result, list)
-        assert call_count == len(TEST_CINEMA_IDS) * 21
+        assert call_count == len(TEST_CINEMA_IDS) * 15
