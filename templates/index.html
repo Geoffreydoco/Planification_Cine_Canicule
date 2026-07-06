@@ -656,6 +656,24 @@
       flex-direction: column;
       gap: 8px;
     }
+    .show-more-sessions-btn {
+      align-self: flex-start;
+      background: none;
+      border: 1px solid var(--border-lt);
+      color: var(--text-2);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color .15s, color .15s;
+    }
+    .show-more-sessions-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .film-card-more-sessions {
+      flex-direction: column;
+      gap: 8px;
+    }
     .film-card-cinema-name {
       font-family: var(--font-mono);
       font-size: 11px;
@@ -1541,6 +1559,14 @@
     </div>`;
   }
 
+  // Film-card "+ N séances" reveal toggle
+  function toggleMoreSessions(btn) {
+    const wrapper = btn.nextElementSibling;
+    const isHidden = wrapper.style.display === 'none';
+    wrapper.style.display = isHidden ? 'flex' : 'none';
+    btn.textContent = isHidden ? 'Moins de séances' : btn.dataset.label;
+  }
+
   function seancesCell(sessions) {
     const sorted = sessions.slice().sort((a, b) => a.heure.localeCompare(b.heure));
     return `<div style="display:flex;flex-wrap:wrap;gap:6px 10px;">${sorted.map(sessionBadge).join('')}</div>`;
@@ -1858,16 +1884,44 @@
         ? `<a href="${escHtml(rep.film_url)}" target="_blank" rel="noopener">${escHtml(rep.film)}</a>`
         : escHtml(rep.film);
 
-      const sessionsHtml = Object.values(cinemaMap)
-        .sort((a, b) => a.cinema.localeCompare(b.cinema, 'fr'))
-        .map(({ cinema, version, sessions }) => {
-          const vLabel = version ? ` <span style="font-size:0.68rem;opacity:.7">(${escHtml(version)})</span>` : '';
-          const sorted = sessions.slice().sort((a, b) => a.heure.localeCompare(b.heure));
-          return `<div>
-            <div class="film-card-cinema-name cinema-hover" data-cinema="${escHtml(cinema)}">${escHtml(cinema)}${vLabel}</div>
-            <div class="film-card-session-badges">${sorted.map(sessionPill).join('')}</div>
-          </div>`;
-        }).join('');
+      // Flatten to a single chronological list so "3 prochaines séances" spans all cinemas,
+      // then group each slice (preview / rest) by cinema for display.
+      const allSessions = [];
+      Object.values(cinemaMap).forEach(({ cinema, version, sessions }) => {
+        sessions.forEach(s => allSessions.push({ ...s, _cinema: cinema, _version: version }));
+      });
+      allSessions.sort((a, b) => a.heure.localeCompare(b.heure));
+      const previewSessions = allSessions.slice(0, 3);
+      const moreSessions    = allSessions.slice(3);
+
+      const groupByCinemaHtml = (list) => {
+        const map = new Map();
+        list.forEach(s => {
+          const key = `${s._cinema}|||${s._version || ''}`;
+          if (!map.has(key)) map.set(key, { cinema: s._cinema, version: s._version, sessions: [] });
+          map.get(key).sessions.push(s);
+        });
+        return [...map.values()]
+          .sort((a, b) => a.cinema.localeCompare(b.cinema, 'fr'))
+          .map(({ cinema, version, sessions }) => {
+            const vLabel = version ? ` <span style="font-size:0.68rem;opacity:.7">(${escHtml(version)})</span>` : '';
+            const sorted = sessions.slice().sort((a, b) => a.heure.localeCompare(b.heure));
+            return `<div>
+              <div class="film-card-cinema-name cinema-hover" data-cinema="${escHtml(cinema)}">${escHtml(cinema)}${vLabel}</div>
+              <div class="film-card-session-badges">${sorted.map(sessionPill).join('')}</div>
+            </div>`;
+          }).join('');
+      };
+
+      const previewHtml  = groupByCinemaHtml(previewSessions);
+      const moreCount    = moreSessions.length;
+      const moreLabel    = `+ ${moreCount} séance${moreCount !== 1 ? 's' : ''}`;
+      const moreBtnHtml  = moreCount > 0
+        ? `<button class="show-more-sessions-btn" data-label="${escHtml(moreLabel)}" onclick="toggleMoreSessions(this)">${moreLabel}</button>
+           <div class="film-card-more-sessions" style="display:none;">${groupByCinemaHtml(moreSessions)}</div>`
+        : '';
+
+      const sessionsHtml = previewHtml + moreBtnHtml;
 
       return `<div class="film-card">
         <div class="film-card-poster">${posterHtml}${warningHtml}</div>
